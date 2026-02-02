@@ -14,6 +14,10 @@ An Electron-based subtitle overlay for MPV with Yomitan lookup support for Japan
 - Integrated texthooker-ui server for use with Yomitan
 - Integrated websocket server (if [mpv_websocket](https://github.com/kuroahna/mpv_websocket) is not found) to send lines to the texthooker
 
+## Demo
+
+<video controls src="https://github.com/user-attachments/assets/5f3705e5-af7c-4618-a433-c8fd30bf5db8">
+
 ## Requirements
 
 - **Wayland/X11 compositor** (one of the following):
