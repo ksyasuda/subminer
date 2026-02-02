@@ -1,7 +1,8 @@
 <div align="center">
   <img src="assets/mpv-yomitan.png" width="169" height="169" alt="mpv-yomitan logo">
-  <h1>mpv-yomitan</h1>
 </div>
+
+# mpv-yomitan
 An Electron-based subtitle overlay for MPV with Yomitan lookup support for Japanese language learning.
 
 ## Features
@@ -14,7 +15,10 @@ An Electron-based subtitle overlay for MPV with Yomitan lookup support for Japan
 
 ## Demo
 
-<video controls src="https://github.com/user-attachments/assets/5f3705e5-af7c-4618-a433-c8fd30bf5db8">
+<video src="https://github.com/user-attachments/assets/5f3705e5-af7c-4618-a433-c8fd30bf5db8">
+  <source src="https://github.com/user-attachments/assets/5f3705e5-af7c-4618-a433-c8fd30bf5db8" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
 
 ## Requirements
 
