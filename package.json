@@ -10,7 +10,9 @@
     "dev": "pnpm run build && electron . --start --dev",
     "stop": "electron . --stop",
     "toggle": "electron . --toggle",
-    "build:appimage": "pnpm run build && electron-builder --linux AppImage"
+    "build:appimage": "pnpm run build && electron-builder --linux AppImage",
+    "build:mac": "pnpm run build && electron-builder --mac",
+    "build:mac:dmg": "pnpm run build && electron-builder --mac dmg"
   },
   "keywords": [
     "anki",
@@ -46,6 +48,18 @@
         "AppImage"
       ],
       "category": "AudioVideo"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.video",
+      "icon": "assets/mpv-yomitan.icns",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "files": [
       "dist/**/*",

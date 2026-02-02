@@ -22,6 +22,7 @@ An all-in-one sentence mining overlay for MPV with AnkiConnect and dictionary (Y
 
 ## Requirements
 
+### Linux
 - **Wayland/X11 compositor** (one of the following):
   - Hyprland (uses `hyprctl`)
   - Sway (uses `swaymsg`)
@@ -29,6 +30,12 @@ An all-in-one sentence mining overlay for MPV with AnkiConnect and dictionary (Y
 - mpv (with IPC socket support)
 - mecab and mecab-ipadic (Japanese morphological analyzer)
 - fuse2 (for AppImage support)
+
+### macOS
+- macOS 10.13 or later
+- mpv (with IPC socket support)
+- mecab and mecab-ipadic (Japanese morphological analyzer) - optional
+- **Accessibility permission** required for window tracking (see [macOS Installation](#macos-installation))
 
 **Optional:**
 
@@ -53,7 +60,36 @@ wget https://github.com/sudacode/subminer/releases/download/v1.0.0/subminer -O ~
 chmod +x ~/.local/bin/subminer
 ```
 
-### From Source (Development)
+### macOS Installation
+
+Install dependencies using Homebrew:
+
+```bash
+brew install mpv mecab mecab-ipadic
+```
+
+Build from source:
+
+```bash
+git clone https://github.com/ksyasuda/mpv-yomitan.git
+cd mpv-yomitan
+pnpm install
+cd vendor/texthooker-ui && pnpm install && pnpm build && cd ../..
+pnpm run build:mac
+```
+
+The built app will be available in the `dist` directory.
+
+**Accessibility Permission:**
+
+After launching the app for the first time, grant accessibility permission:
+1. Open **System Preferences** → **Security & Privacy** → **Privacy** tab
+2. Select **Accessibility** from the left sidebar
+3. Add mpv-yomitan to the list
+
+Without this permission, window tracking will not work and the overlay won't follow the MPV window.
+
+### From Source (Linux/Development)
 
 ```bash
 git clone https://github.com/sudacode/subminer.git
@@ -74,6 +110,29 @@ chmod +x ~/.local/bin/subminer.AppImage ~/.local/bin/subminer
 <!-- # Using the PKGBUILD -->
 <!-- makepkg -si -->
 <!-- ``` -->
+
+### macOS Usage Notes
+
+**Launching MPV with IPC:**
+
+```bash
+mpv --input-ipc-server=/tmp/mpv-yomitan-socket video.mkv
+```
+
+**Config Location:**
+
+Settings are stored in `~/.config/mpv-yomitan-overlay/config.json` (same as Linux).
+
+**MeCab Installation Paths:**
+
+- Apple Silicon (M1/M2): `/opt/homebrew/bin/mecab`
+- Intel: `/usr/local/bin/mecab`
+
+The app auto-detects the correct path.
+
+**Fullscreen Mode:**
+
+The overlay should appear correctly in fullscreen. If you encounter issues, check that macOS accessibility permissions are granted (see [macOS Installation](#macos-installation)).
 
 ### MPV Plugin (Optional)
 

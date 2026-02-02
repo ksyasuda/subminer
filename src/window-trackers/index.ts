@@ -20,11 +20,13 @@ import { BaseWindowTracker } from "./base-tracker";
 import { HyprlandWindowTracker } from "./hyprland-tracker";
 import { SwayWindowTracker } from "./sway-tracker";
 import { X11WindowTracker } from "./x11-tracker";
+import { MacOSWindowTracker } from "./macos-tracker";
 
-export type Compositor = "hyprland" | "sway" | "x11" | null;
+export type Compositor = "hyprland" | "sway" | "x11" | "macos" | null;
 export type Backend = "auto" | Exclude<Compositor, null>;
 
 export function detectCompositor(): Compositor {
+  if (process.platform === "darwin") return "macos";
   if (process.env.HYPRLAND_INSTANCE_SIGNATURE) return "hyprland";
   if (process.env.SWAYSOCK) return "sway";
   if (process.env.XDG_SESSION_TYPE === "x11") return "x11";
@@ -42,6 +44,8 @@ export function createWindowTracker(backend: Backend = "auto"): BaseWindowTracke
       return new SwayWindowTracker();
     case "x11":
       return new X11WindowTracker();
+    case "macos":
+      return new MacOSWindowTracker();
     default:
       console.warn(
         "No supported compositor detected. Window tracking disabled.",
@@ -55,4 +59,5 @@ export {
   HyprlandWindowTracker,
   SwayWindowTracker,
   X11WindowTracker,
+  MacOSWindowTracker,
 };
