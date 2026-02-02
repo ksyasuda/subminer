@@ -5,6 +5,7 @@
   "main": "dist/main.js",
   "scripts": {
     "build": "tsc && cp src/renderer/index.html src/renderer/style.css dist/renderer/",
+    "clean": "rm dist/*.AppImage",
     "start": "pnpm run build && electron . --start",
     "dev": "pnpm run build && electron . --start --dev",
     "stop": "electron . --stop",
@@ -33,7 +34,7 @@
   "build": {
     "appId": "com.sudacode.mpv-yomitan",
     "productName": "mpv-yomitan",
-    "icon": false,
+    "icon": "assets/mpv-yomitan.png",
     "linux": {
       "target": [
         "AppImage"
@@ -50,6 +51,10 @@
       {
         "from": "vendor/yomitan",
         "to": "yomitan"
+      },
+      {
+        "from": "assets",
+        "to": "assets"
       }
     ]
   }
