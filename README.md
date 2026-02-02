@@ -21,6 +21,7 @@ An Electron-based subtitle overlay for MPV with Yomitan lookup support for Japan
 - fuse2 (for AppImage support)
 
 **Optional:**
+
 - fzf (terminal-based video picker, default)
 - rofi (GUI-based video picker)
 - chafa (thumbnail previews in fzf)
@@ -79,9 +80,9 @@ cp plugin/mpv-yomitan.conf ~/.config/mpv/script-opts/
 
 #### Plugin Keybindings
 
-| Keybind | Action                                    |
-| ------- | ----------------------------------------- |
-| `y`     | Open mpv-yomitan menu (fuzzy-searchable)  |
+| Keybind | Action                                   |
+| ------- | ---------------------------------------- |
+| `y`     | Open mpv-yomitan menu (fuzzy-searchable) |
 
 The menu provides options to start/stop/toggle the overlay and open settings. Type to filter or use arrow keys to navigate.
 
@@ -119,6 +120,7 @@ osd_messages=yes
 ```
 
 The plugin auto-detects the binary location, searching:
+
 - `~/.local/bin/mpv-yomitan.AppImage`
 - `/opt/mpv-yomitan/mpv-yomitan`
 - `/usr/local/bin/mpv-yomitan`
@@ -128,10 +130,10 @@ The plugin auto-detects the binary location, searching:
 
 There are two ways to use mpv-yomitan:
 
-| Approach | Best For |
-| -------- | -------- |
-| **ympv script** | All-in-one solution. Handles video selection, launches MPV with the correct socket, starts the overlay automatically, and cleans up on exit. |
-| **MPV plugin** | When you launch MPV yourself or from other tools. Provides an in-MPV menu (press `y`) to control the overlay. Requires `--input-ipc-server=/tmp/mpv-yomitan-socket`. |
+| Approach        | Best For                                                                                                                                                             |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ympv script** | All-in-one solution. Handles video selection, launches MPV with the correct socket, starts the overlay automatically, and cleans up on exit.                         |
+| **MPV plugin**  | When you launch MPV yourself or from other tools. Provides an in-MPV menu (press `y`) to control the overlay. Requires `--input-ipc-server=/tmp/mpv-yomitan-socket`. |
 
 You can use both together—install the plugin for on-demand control, but use `ympv` when you want the streamlined workflow.
 
@@ -219,10 +221,10 @@ By default, the server uses "auto" mode: it starts automatically unless [mpv_web
 }
 ```
 
-| Option | Values | Description |
-| ------ | ------ | ----------- |
+| Option    | Values                    | Description                                              |
+| --------- | ------------------------- | -------------------------------------------------------- |
 | `enabled` | `true`, `false`, `"auto"` | `"auto"` (default) disables if mpv_websocket is detected |
-| `port` | number | WebSocket server port (default: 6677) |
+| `port`    | number                    | WebSocket server port (default: 6677)                    |
 
 ### Keybindings
 
@@ -247,6 +249,7 @@ Add a `keybindings` array to configure keyboard shortcuts that send commands to 
 **Key format:** Use `KeyboardEvent.code` values (`Space`, `ArrowRight`, `KeyR`, etc.) with optional modifiers (`Ctrl+`, `Alt+`, `Shift+`, `Meta+`).
 
 **Disable a default binding:** Set command to `null`:
+
 ```json
 { "key": "Space", "command": null }
 ```
@@ -267,7 +270,7 @@ This project is licensed under the GNU General Public License v3.0 - see the [LI
 
 This project includes the following third-party components:
 
-- **[Yomitan](https://github.com/yomitan-org/yomitan)** - GPL-3.0
+- **[Yomitan](https://github.com/yomidevs/yomitan)** - GPL-3.0
 - **[texthooker-ui](https://github.com/Renji-XD/texthooker-ui)** - MIT
 
 ### Acknowledgments
