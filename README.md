@@ -1,9 +1,7 @@
-<p align="center">
-  <img src="assets/mpv-yomitan.png" width="200" alt="mpv-yomitan logo">
-</p>
-
-# mpv-yomitan
-
+<div align="center">
+  <img src="assets/mpv-yomitan.png" width="169" height="169" alt="mpv-yomitan logo">
+  <h1>mpv-yomitan</h1>
+</div>
 An Electron-based subtitle overlay for MPV with Yomitan lookup support for Japanese language learning.
 
 ## Features
