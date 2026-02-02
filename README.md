@@ -125,10 +125,11 @@ Settings are stored in `~/.config/mpv-yomitan-overlay/config.json` (same as Linu
 
 **MeCab Installation Paths:**
 
+Common Homebrew install paths:
 - Apple Silicon (M1/M2): `/opt/homebrew/bin/mecab`
 - Intel: `/usr/local/bin/mecab`
 
-The app auto-detects the correct path.
+Ensure that `mecab` is available on your PATH when launching mpv-yomitan (for example, by starting it from a terminal where `which mecab` works), otherwise MeCab may not be detected.
 
 **Fullscreen Mode:**
 
