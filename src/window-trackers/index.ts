@@ -30,9 +30,16 @@ export function detectCompositor(): Compositor {
   return null;
 }
 
-export function createWindowTracker(): BaseWindowTracker | null {
-  const compositor = detectCompositor();
-  console.log(`Detected compositor: ${compositor || "none"}`);
+export function createWindowTracker(backendOverride?: string): BaseWindowTracker | null {
+  let compositor: Compositor;
+
+  if (backendOverride && backendOverride !== "auto") {
+    compositor = backendOverride as Compositor;
+    console.log(`Using backend override: ${compositor}`);
+  } else {
+    compositor = detectCompositor();
+    console.log(`Detected compositor: ${compositor || "none"}`);
+  }
 
   switch (compositor) {
     case "hyprland":

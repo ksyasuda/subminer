@@ -76,11 +76,34 @@ export interface TexthookerConfig {
   openBrowser?: boolean;
 }
 
+export interface AnkiConnectConfig {
+  enabled?: boolean;
+  url?: string;
+  pollingRate?: number;
+  audioField?: string;
+  imageField?: string;
+  sentenceField?: string;
+  generateAudio?: boolean;
+  generateImage?: boolean;
+  imageType?: "static" | "avif";
+  imageFormat?: "jpg" | "png" | "webp";
+  overwriteAudio?: boolean;
+  overwriteImage?: boolean;
+  audioPadding?: number;
+  fallbackDuration?: number;
+  deck?: string;
+  miscInfoField?: string;
+  miscInfoPattern?: string;
+  highlightWord?: boolean;
+  showNotificationOnUpdate?: boolean;
+}
+
 export interface Config {
   subtitlePosition?: SubtitlePosition;
   keybindings?: Keybinding[];
   websocket?: WebSocketConfig;
   texthooker?: TexthookerConfig;
+  ankiConnect?: AnkiConnectConfig;
   auto_start_overlay?: boolean;
 }
 
@@ -108,6 +131,9 @@ export interface ElectronAPI {
   setMecabEnabled: (enabled: boolean) => void;
   sendMpvCommand: (command: string[]) => void;
   getKeybindings: () => Promise<Keybinding[]>;
+  getAnkiConnectStatus: () => Promise<boolean>;
+  setAnkiConnectEnabled: (enabled: boolean) => void;
+  clearAnkiConnectHistory: () => void;
 }
 
 declare global {
