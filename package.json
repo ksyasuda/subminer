@@ -55,7 +55,7 @@
         "zip"
       ],
       "category": "public.app-category.video",
-      "icon": "assets/mpv-yomitan.icns",
+      "icon": "assets/mpv-yomitan.png",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
