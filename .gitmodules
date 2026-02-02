@@ -1,0 +1,3 @@
+[submodule "texthooker-ui"]
+	path = texthooker-ui
+	url = git@github.com:Renji-XD/texthooker-ui.git

@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Electron build output
+out/
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp
+*.swo
+tmp/*

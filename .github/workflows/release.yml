@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build texthooker-ui
+        run: |
+          cd vendor/texthooker-ui
+          pnpm install
+          pnpm build
+
+      - name: Build AppImage
+        run: pnpm run build:appimage
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload AppImage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: appimage
+          path: dist/*.AppImage
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download AppImage
+        uses: actions/download-artifact@v4
+        with:
+          name: appimage
+          path: dist
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            CHANGES=$(git log --pretty=format:"- %s" ${PREV_TAG}..HEAD)
+          else
+            COMMIT_COUNT=$(git rev-list --count HEAD)
+            if [ "$COMMIT_COUNT" -gt 10 ]; then
+              CHANGES=$(git log --pretty=format:"- %s" HEAD~10..HEAD)
+            else
+              CHANGES=$(git log --pretty=format:"- %s")
+            fi
+          fi
+          echo "CHANGES<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## Changes
+            ${{ steps.changelog.outputs.CHANGES }}
+
+            ## Installation
+
+            ### AppImage (Recommended)
+            1. Download the AppImage below
+            2. Make it executable: `chmod +x mpv-yomitan-*.AppImage`
+            3. Run: `./mpv-yomitan-*.AppImage`
+
+            ### Arch Linux (AUR)
+            ```bash
+            yay -S mpv-yomitan
+            ```
+
+            ### Manual Installation
+            See the [README](https://github.com/${{ github.repository }}#installation) for manual installation instructions.
+          files: |
+            dist/*.AppImage
+            ympv
+          draft: false
+          prerelease: false
