@@ -46,6 +46,7 @@ import * as http from "http";
 import * as os from "os";
 import * as fs from "fs";
 import WebSocket from "ws";
+import { parse as parseJsonc } from "jsonc-parser";
 import { MecabTokenizer } from "./mecab-tokenizer";
 import { mergeTokens } from "./token-merger";
 import { createWindowTracker, BaseWindowTracker } from "./window-trackers";
@@ -97,12 +98,19 @@ const DEFAULT_KEYBINDINGS: Keybinding[] = [
   { key: "Space", command: ["cycle", "pause"] },
 ];
 
-const CONFIG_FILE = path.join(
+const CONFIG_DIR = path.join(
   os.homedir(),
   ".config",
   "mpv-yomitan-overlay",
-  "config.json",
 );
+const CONFIG_FILE_JSONC = path.join(CONFIG_DIR, "config.jsonc");
+const CONFIG_FILE_JSON = path.join(CONFIG_DIR, "config.json");
+
+function getConfigFilePath(): string {
+  if (fs.existsSync(CONFIG_FILE_JSONC)) return CONFIG_FILE_JSONC;
+  if (fs.existsSync(CONFIG_FILE_JSON)) return CONFIG_FILE_JSON;
+  return CONFIG_FILE_JSONC;
+}
 
 interface LoadConfigResult {
   success: boolean;
@@ -111,9 +119,13 @@ interface LoadConfigResult {
 
 function loadConfig(): LoadConfigResult {
   try {
-    if (fs.existsSync(CONFIG_FILE)) {
-      const data = fs.readFileSync(CONFIG_FILE, "utf-8");
-      return { success: true, config: JSON.parse(data) as Config };
+    const configPath = getConfigFilePath();
+    if (fs.existsSync(configPath)) {
+      const data = fs.readFileSync(configPath, "utf-8");
+      const config = configPath.endsWith(".jsonc")
+        ? parseJsonc(data)
+        : JSON.parse(data);
+      return { success: true, config: config as Config };
     }
     return { success: true, config: {} };
   } catch (err) {
@@ -124,11 +136,11 @@ function loadConfig(): LoadConfigResult {
 
 function saveConfig(config: Config): void {
   try {
-    const dir = path.dirname(CONFIG_FILE);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    if (!fs.existsSync(CONFIG_DIR)) {
+      fs.mkdirSync(CONFIG_DIR, { recursive: true });
     }
-    fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
+    const configPath = getConfigFilePath();
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
   } catch (err) {
     console.error("Failed to save config:", (err as Error).message);
   }
@@ -375,6 +387,7 @@ class MpvIpcClient {
   public socket: net.Socket | null = null;
   private buffer = "";
   public connected = false;
+  private reconnectAttempt = 0;
 
   constructor(socketPath: string) {
     this.socketPath = socketPath;
@@ -390,6 +403,7 @@ class MpvIpcClient {
     this.socket.on("connect", () => {
       console.log("Connected to MPV socket");
       this.connected = true;
+      this.reconnectAttempt = 0;
       this.subscribeToProperties();
       this.getInitialState();
 
@@ -425,10 +439,21 @@ class MpvIpcClient {
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
     }
+    const attempt = this.reconnectAttempt++;
+    let delay: number;
+    if (attempt < 2) {
+      delay = 200;
+    } else if (attempt < 4) {
+      delay = 500;
+    } else if (attempt < 6) {
+      delay = 1000;
+    } else {
+      delay = 2000;
+    }
     reconnectTimer = setTimeout(() => {
-      console.log("Attempting to reconnect to MPV...");
+      console.log(`Attempting to reconnect to MPV (attempt ${attempt + 1}, delay ${delay}ms)...`);
       this.connect();
-    }, 2000);
+    }, delay);
   }
 
   private processBuffer(): void {
@@ -875,6 +900,20 @@ app.whenReady().then(async () => {
   loadSubtitlePosition();
   loadKeybindings();
 
+  mpvClient = new MpvIpcClient(MPV_SOCKET_PATH);
+  mpvClient.connect();
+
+  const { config } = loadConfig();
+  const wsConfig = config.websocket || {};
+  const wsEnabled = wsConfig.enabled ?? "auto";
+  const wsPort = wsConfig.port || DEFAULT_WEBSOCKET_PORT;
+
+  if (wsEnabled === true || (wsEnabled === "auto" && !hasMpvWebsocket())) {
+    startSubtitleWebSocketServer(wsPort);
+  } else if (wsEnabled === "auto") {
+    console.log("mpv_websocket detected, skipping built-in WebSocket server");
+  }
+
   mecabTokenizer = new MecabTokenizer();
   await mecabTokenizer.checkAvailability();
 
@@ -901,20 +940,6 @@ app.whenReady().then(async () => {
       }
     };
     windowTracker.start();
-  }
-
-  mpvClient = new MpvIpcClient(MPV_SOCKET_PATH);
-  mpvClient.connect();
-
-  const { config } = loadConfig();
-  const wsConfig = config.websocket || {};
-  const wsEnabled = wsConfig.enabled ?? "auto";
-  const wsPort = wsConfig.port || DEFAULT_WEBSOCKET_PORT;
-
-  if (wsEnabled === true || (wsEnabled === "auto" && !hasMpvWebsocket())) {
-    startSubtitleWebSocketServer(wsPort);
-  } else if (wsEnabled === "auto") {
-    console.log("mpv_websocket detected, skipping built-in WebSocket server");
   }
 
   handleInitialArgs();
