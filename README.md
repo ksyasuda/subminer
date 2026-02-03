@@ -62,6 +62,8 @@ chmod +x ~/.local/bin/subminer
 
 ### macOS Installation
 
+If you download a release, use the **ZIP** artifact. Unzip it and drag `mpv-yomitan.app` into `/Applications`.
+
 Install dependencies using Homebrew:
 
 ```bash
@@ -78,7 +80,9 @@ cd vendor/texthooker-ui && pnpm install && pnpm build && cd ../..
 pnpm run build:mac
 ```
 
-The built app will be available in the `dist` directory.
+The built app will be available in the `release` directory (ZIP on macOS).
+
+You can launch `mpv-yomitan.app` directly (double-click or `open -a mpv-yomitan`). The app no longer requires a `--start` argument on macOS.
 
 **Accessibility Permission:**
 
@@ -135,6 +139,14 @@ Ensure that `mecab` is available on your PATH when launching mpv-yomitan (for ex
 
 The overlay should appear correctly in fullscreen. If you encounter issues, check that macOS accessibility permissions are granted (see [macOS Installation](#macos-installation)).
 
+**mpv Plugin Binary Path (macOS):**
+
+Set `binary_path` to your app binary, for example:
+
+```ini
+binary_path=/Applications/mpv-yomitan.app/Contents/MacOS/mpv-yomitan
+```
+
 ### MPV Plugin (Optional)
 
 The Lua plugin allows you to control the overlay directly from mpv using keybindings:
@@ -181,7 +193,7 @@ texthooker_enabled=yes
 # Texthooker WebSocket port
 texthooker_port=5174
 
-# Window manager backend: auto, hyprland, sway, x11
+# Window manager backend: auto, hyprland, sway, x11, macos
 backend=auto
 
 # Automatically start overlay when a file is loaded
@@ -196,10 +208,30 @@ osd_messages=yes
 
 The plugin auto-detects the binary location, searching:
 
+- `/Applications/subminer.app/Contents/MacOS/subminer`
+- `~/Applications/subminer.app/Contents/MacOS/subminer`
+- `C:\Program Files\subminer\subminer.exe`
+- `C:\Program Files (x86)\subminer\subminer.exe`
+- `C:\subminer\subminer.exe`
 - `~/.local/bin/subminer.AppImage`
 - `/opt/subminer/subminer.AppImage`
 - `/usr/local/bin/subminer`
 - `/usr/bin/subminer`
+
+**Windows Notes:**
+
+Set the binary and socket path like this:
+
+```ini
+binary_path=C:\\Program Files\\subminer\\subminer.exe
+socket_path=\\\\.\\pipe\\subminer-socket
+```
+
+Launch mpv with:
+
+```bash
+mpv --input-ipc-server=\\\\.\\pipe\\subminer-socket video.mkv
+```
 
 ## SubMiner Script vs MPV Plugin
 

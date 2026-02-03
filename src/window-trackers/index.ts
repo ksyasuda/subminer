@@ -33,8 +33,30 @@ export function detectCompositor(): Compositor {
   return null;
 }
 
-export function createWindowTracker(backend: Backend = "auto"): BaseWindowTracker | null {
-  const compositor = backend === "auto" ? detectCompositor() : backend;
+function normalizeCompositor(value: string): Compositor | null {
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "hyprland") return "hyprland";
+  if (normalized === "sway") return "sway";
+  if (normalized === "x11") return "x11";
+  if (normalized === "macos") return "macos";
+  return null;
+}
+
+export function createWindowTracker(
+  override?: string | null,
+): BaseWindowTracker | null {
+  let compositor = detectCompositor();
+
+  if (override && override !== "auto") {
+    const normalized = normalizeCompositor(override);
+    if (normalized) {
+      compositor = normalized;
+    } else {
+      console.warn(
+        `Unsupported backend override "${override}", falling back to auto.`,
+      );
+    }
+  }
   console.log(`Detected compositor: ${compositor || "none"}`);
 
   switch (compositor) {
