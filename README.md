@@ -62,7 +62,7 @@ chmod +x ~/.local/bin/subminer
 
 ### macOS Installation
 
-If you download a release, use the **ZIP** artifact. Unzip it and drag `mpv-yomitan.app` into `/Applications`.
+If you download a release, use the **ZIP** artifact. Unzip it and drag `subminer.app` into `/Applications`.
 
 Install dependencies using Homebrew:
 
@@ -73,8 +73,8 @@ brew install mpv mecab mecab-ipadic
 Build from source:
 
 ```bash
-git clone https://github.com/ksyasuda/mpv-yomitan.git
-cd mpv-yomitan
+git clone https://github.com/sudacode/subminer.git
+cd subminer
 pnpm install
 cd vendor/texthooker-ui && pnpm install && pnpm build && cd ../..
 pnpm run build:mac
@@ -82,14 +82,14 @@ pnpm run build:mac
 
 The built app will be available in the `release` directory (ZIP on macOS).
 
-You can launch `mpv-yomitan.app` directly (double-click or `open -a mpv-yomitan`). The app no longer requires a `--start` argument on macOS.
+You can launch `subminer.app` directly (double-click or `open -a subminer`). The app no longer requires a `--start` argument on macOS.
 
 **Accessibility Permission:**
 
 After launching the app for the first time, grant accessibility permission:
 1. Open **System Preferences** → **Security & Privacy** → **Privacy** tab
 2. Select **Accessibility** from the left sidebar
-3. Add mpv-yomitan to the list
+3. Add SubMiner to the list
 
 Without this permission, window tracking will not work and the overlay won't follow the MPV window.
 
@@ -120,12 +120,12 @@ chmod +x ~/.local/bin/subminer.AppImage ~/.local/bin/subminer
 **Launching MPV with IPC:**
 
 ```bash
-mpv --input-ipc-server=/tmp/mpv-yomitan-socket video.mkv
+mpv --input-ipc-server=/tmp/subminer-socket video.mkv
 ```
 
 **Config Location:**
 
-Settings are stored in `~/.config/mpv-yomitan-overlay/config.json` (same as Linux).
+Settings are stored in `~/.config/subminer/config.json` (same as Linux).
 
 **MeCab Installation Paths:**
 
@@ -133,7 +133,7 @@ Common Homebrew install paths:
 - Apple Silicon (M1/M2): `/opt/homebrew/bin/mecab`
 - Intel: `/usr/local/bin/mecab`
 
-Ensure that `mecab` is available on your PATH when launching mpv-yomitan (for example, by starting it from a terminal where `which mecab` works), otherwise MeCab may not be detected.
+Ensure that `mecab` is available on your PATH when launching subminer (for example, by starting it from a terminal where `which mecab` works), otherwise MeCab may not be detected.
 
 **Fullscreen Mode:**
 
@@ -144,7 +144,7 @@ The overlay should appear correctly in fullscreen. If you encounter issues, chec
 Set `binary_path` to your app binary, for example:
 
 ```ini
-binary_path=/Applications/mpv-yomitan.app/Contents/MacOS/mpv-yomitan
+binary_path=/Applications/subminer.app/Contents/MacOS/subminer
 ```
 
 ### MPV Plugin (Optional)

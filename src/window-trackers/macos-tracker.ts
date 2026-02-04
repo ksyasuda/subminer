@@ -1,5 +1,5 @@
 /*
-  mpv-yomitan - Yomitan integration for mpv
+  subminer - Yomitan integration for mpv
   Copyright (C) 2024 sudacode
 
   This program is free software: you can redistribute it and/or modify
