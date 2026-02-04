@@ -178,50 +178,6 @@ show_rofi_menu() {
     echo "$dir/$selection"
 }
 
-<<<<<<< HEAD:subminer
-get_video_thumbnail() {
-    local video="$1"
-    local thumb_dir="$HOME/.cache/thumbnails/large"
-    local video_uri="file://$(realpath "$video")"
-    local thumb_hash=$(echo -n "$video_uri" | md5sum | cut -d' ' -f1)
-    local thumb_path="$thumb_dir/$thumb_hash.png"
-
-    if [ -f "$thumb_path" ]; then
-        echo "$thumb_path"
-        return 0
-    fi
-
-    local tmp_thumb="/tmp/subminer-thumb-$$.jpg"
-    if command -v ffmpegthumbnailer &>/dev/null; then
-        ffmpegthumbnailer -i "$video" -o "$tmp_thumb" -s 512 -q 5 2>/dev/null && echo "$tmp_thumb"
-    elif command -v ffmpeg &>/dev/null; then
-        ffmpeg -i "$video" -ss 00:00:30 -vframes 1 -vf "scale=512:-1" "$tmp_thumb" 2>/dev/null && echo "$tmp_thumb"
-    fi
-}
-
-||||||| parent of 4eb64f4 (update shellcheck command and appease linter):ympv
-get_video_thumbnail() {
-    local video="$1"
-    local thumb_dir="$HOME/.cache/thumbnails/large"
-    local video_uri="file://$(realpath "$video")"
-    local thumb_hash=$(echo -n "$video_uri" | md5sum | cut -d' ' -f1)
-    local thumb_path="$thumb_dir/$thumb_hash.png"
-
-    if [ -f "$thumb_path" ]; then
-        echo "$thumb_path"
-        return 0
-    fi
-
-    local tmp_thumb="/tmp/ympv-thumb-$$.jpg"
-    if command -v ffmpegthumbnailer &>/dev/null; then
-        ffmpegthumbnailer -i "$video" -o "$tmp_thumb" -s 512 -q 5 2>/dev/null && echo "$tmp_thumb"
-    elif command -v ffmpeg &>/dev/null; then
-        ffmpeg -i "$video" -ss 00:00:30 -vframes 1 -vf "scale=512:-1" "$tmp_thumb" 2>/dev/null && echo "$tmp_thumb"
-    fi
-}
-
-=======
->>>>>>> 4eb64f4 (update shellcheck command and appease linter):ympv
 show_fzf_menu() {
     local dir="$1"
 
@@ -274,42 +230,18 @@ show_fzf_menu() {
 }
 
 find_appimage() {
-<<<<<<< HEAD:subminer
-    if [ -n "$SUBMINER_APPIMAGE_PATH" ] && [ -x "$SUBMINER_APPIMAGE_PATH" ]; then
+    if [[ -n "$SUBMINER_APPIMAGE_PATH" ]] && [[ -x "$SUBMINER_APPIMAGE_PATH" ]]; then
         echo "$SUBMINER_APPIMAGE_PATH"
-||||||| parent of 4eb64f4 (update shellcheck command and appease linter):ympv
-    if [ -n "$MPV_YOMITAN_APPIMAGE_PATH" ] && [ -x "$MPV_YOMITAN_APPIMAGE_PATH" ]; then
-        echo "$MPV_YOMITAN_APPIMAGE_PATH"
-=======
-    if [[ -n "$MPV_YOMITAN_APPIMAGE_PATH" ]] && [[ -x "$MPV_YOMITAN_APPIMAGE_PATH" ]]; then
-        echo "$MPV_YOMITAN_APPIMAGE_PATH"
->>>>>>> 4eb64f4 (update shellcheck command and appease linter):ympv
         return 0
     fi
 
-<<<<<<< HEAD:subminer
-    if [ -x "$HOME/.local/bin/subminer.AppImage" ]; then
+    if [[ -x "$HOME/.local/bin/subminer.AppImage" ]]; then
         echo "$HOME/.local/bin/subminer.AppImage"
-||||||| parent of 4eb64f4 (update shellcheck command and appease linter):ympv
-    if [ -x "$HOME/.local/bin/mpv-yomitan.AppImage" ]; then
-        echo "$HOME/.local/bin/mpv-yomitan.AppImage"
-=======
-    if [[ -x "$HOME/.local/bin/mpv-yomitan.AppImage" ]]; then
-        echo "$HOME/.local/bin/mpv-yomitan.AppImage"
->>>>>>> 4eb64f4 (update shellcheck command and appease linter):ympv
         return 0
     fi
 
-<<<<<<< HEAD:subminer
-    if [ -x "/opt/subminer/subminer.AppImage" ]; then
+    if [[ -x "/opt/subminer/subminer.AppImage" ]]; then
         echo "/opt/subminer/subminer.AppImage"
-||||||| parent of 4eb64f4 (update shellcheck command and appease linter):ympv
-    if [ -x "/opt/mpv-yomitan/mpv-yomitan.AppImage" ]; then
-        echo "/opt/mpv-yomitan/mpv-yomitan.AppImage"
-=======
-    if [[ -x "/opt/mpv-yomitan/mpv-yomitan.AppImage" ]]; then
-        echo "/opt/mpv-yomitan/mpv-yomitan.AppImage"
->>>>>>> 4eb64f4 (update shellcheck command and appease linter):ympv
         return 0
     fi
 
@@ -328,29 +260,13 @@ start_overlay() {
 
     local appimage
     appimage=$(find_appimage)
-<<<<<<< HEAD:subminer
-    if [ -z "$appimage" ]; then
-        log_error "SubMiner AppImage not found. Install to ~/.local/bin/ or set SUBMINER_APPIMAGE_PATH"
-||||||| parent of 4eb64f4 (update shellcheck command and appease linter):ympv
-    if [ -z "$appimage" ]; then
-        log_error "mpv-yomitan AppImage not found. Install to ~/.local/bin/ or set MPV_YOMITAN_APPIMAGE_PATH"
-=======
     if [[ -z "$appimage" ]]; then
-        log_error "mpv-yomitan AppImage not found. Install to ~/.local/bin/ or set MPV_YOMITAN_APPIMAGE_PATH"
->>>>>>> 4eb64f4 (update shellcheck command and appease linter):ympv
+        log_error "SubMiner AppImage not found. Install to ~/.local/bin/ or set SUBMINER_APPIMAGE_PATH"
         exit 1
     fi
 
-<<<<<<< HEAD:subminer
     local args=(--start --backend "$detected_backend" --socket "$MPV_SOCKET_PATH")
-    if [ "$USE_TEXTHOOKER" = true ]; then
-||||||| parent of 4eb64f4 (update shellcheck command and appease linter):ympv
-    local args=(--start --backend "$detected_backend")
-    if [ "$USE_TEXTHOOKER" = true ]; then
-=======
-    local args=(--start --backend "$detected_backend")
     if [[ "$USE_TEXTHOOKER" = true ]]; then
->>>>>>> 4eb64f4 (update shellcheck command and appease linter):ympv
         args+=(--texthooker)
     fi
 
@@ -361,16 +277,8 @@ start_overlay() {
 
 # shellcheck disable=SC2329
 stop_overlay() {
-<<<<<<< HEAD:subminer
-    if [ -n "$OVERLAY_PID" ]; then
-        log_info "Stopping SubMiner overlay..."
-||||||| parent of 4eb64f4 (update shellcheck command and appease linter):ympv
-    if [ -n "$OVERLAY_PID" ]; then
-        log_info "Stopping Yomitan overlay..."
-=======
     if [[ -n "$OVERLAY_PID" ]]; then
-        log_info "Stopping Yomitan overlay..."
->>>>>>> 4eb64f4 (update shellcheck command and appease linter):ympv
+        log_info "Stopping SubMiner overlay..."
         kill "$OVERLAY_PID" 2>/dev/null || true
         wait "$OVERLAY_PID" 2>/dev/null || true
     fi
