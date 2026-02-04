@@ -54,6 +54,18 @@ const electronAPI: ElectronAPI = {
   },
 
   getKeybindings: (): Promise<Keybinding[]> => ipcRenderer.invoke("get-keybindings"),
+
+  quitApp: () => {
+    ipcRenderer.send("quit-app");
+  },
+
+  toggleDevTools: () => {
+    ipcRenderer.send("toggle-dev-tools");
+  },
+
+  toggleOverlay: () => {
+    ipcRenderer.send("toggle-overlay");
+  },
 };
 
 contextBridge.exposeInMainWorld("electronAPI", electronAPI);

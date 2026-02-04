@@ -81,7 +81,6 @@ export interface Config {
   keybindings?: Keybinding[];
   websocket?: WebSocketConfig;
   texthooker?: TexthookerConfig;
-  auto_start_overlay?: boolean;
 }
 
 export interface SubtitleData {
@@ -108,6 +107,9 @@ export interface ElectronAPI {
   setMecabEnabled: (enabled: boolean) => void;
   sendMpvCommand: (command: string[]) => void;
   getKeybindings: () => Promise<Keybinding[]>;
+  quitApp: () => void;
+  toggleDevTools: () => void;
+  toggleOverlay: () => void;
 }
 
 declare global {
