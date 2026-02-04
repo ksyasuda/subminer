@@ -80,6 +80,14 @@ const electronAPI: ElectronAPI = {
   toggleOverlay: () => {
     ipcRenderer.send("toggle-overlay");
   },
+
+  getAnkiConnectStatus: (): Promise<boolean> => ipcRenderer.invoke("get-anki-connect-status"),
+  setAnkiConnectEnabled: (enabled: boolean) => {
+    ipcRenderer.send("set-anki-connect-enabled", enabled);
+  },
+  clearAnkiConnectHistory: () => {
+    ipcRenderer.send("clear-anki-connect-history");
+  },
 };
 
 contextBridge.exposeInMainWorld("electronAPI", electronAPI);

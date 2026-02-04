@@ -26,6 +26,8 @@ import {
   screen,
   IpcMainEvent,
   Extension,
+  Notification,
+  nativeImage,
 } from "electron";
 
 protocol.registerSchemesAsPrivileged([
@@ -59,6 +61,8 @@ import {
   Keybinding,
   WindowGeometry,
 } from "./types";
+import { SubtitleTimingTracker } from "./subtitle-timing-tracker";
+import { AnkiIntegration } from "./anki-integration";
 
 const DEFAULT_TEXTHOOKER_PORT = 5174;
 const DEFAULT_WEBSOCKET_PORT = 6677;
@@ -220,6 +224,8 @@ let subtitlePosition: SubtitlePosition | null = null;
 let currentMediaPath: string | null = null;
 let mecabTokenizer: MecabTokenizer | null = null;
 let keybindings: Keybinding[] = [];
+let subtitleTimingTracker: SubtitleTimingTracker | null = null;
+let ankiIntegration: AnkiIntegration | null = null;
 
 const DEFAULT_KEYBINDINGS: Keybinding[] = [
   { key: "Space", command: ["cycle", "pause"] },
@@ -506,6 +512,8 @@ if (!gotTheLock) {
       mecabTokenizer = new MecabTokenizer();
       await mecabTokenizer.checkAvailability();
 
+      subtitleTimingTracker = new SubtitleTimingTracker();
+
       await loadYomitanExtension();
       createMainWindow();
       registerGlobalShortcuts();
@@ -531,6 +539,45 @@ if (!gotTheLock) {
         windowTracker.start();
       }
 
+      if (config.ankiConnect?.enabled && subtitleTimingTracker && mpvClient) {
+        ankiIntegration = new AnkiIntegration(
+          config.ankiConnect,
+          subtitleTimingTracker,
+          mpvClient,
+          (text: string) => {
+            if (mpvClient) {
+              mpvClient.send({
+                command: ["show-text", text, "3000"],
+              });
+            }
+          },
+          (title: string, options: any) => {
+            const notificationOptions: any = { title };
+
+            if (options.body) {
+              notificationOptions.body = options.body;
+            }
+
+            if (options.icon) {
+              if (typeof options.icon === 'string' && options.icon.startsWith('data:image/')) {
+                const base64Data = options.icon.replace(/^data:image\/\w+;base64,/, '');
+                try {
+                  notificationOptions.icon = nativeImage.createFromBuffer(Buffer.from(base64Data, 'base64'));
+                } catch (err) {
+                  console.error('Failed to create notification icon from base64:', err);
+                }
+              } else {
+                notificationOptions.icon = options.icon;
+              }
+            }
+
+            const notification = new Notification(notificationOptions);
+            notification.show();
+          },
+        );
+        ankiIntegration.start();
+      }
+
       handleInitialArgs();
     });
 
@@ -552,6 +599,12 @@ if (!gotTheLock) {
       }
       if (reconnectTimer) {
         clearTimeout(reconnectTimer);
+      }
+      if (subtitleTimingTracker) {
+        subtitleTimingTracker.destroy();
+      }
+      if (ankiIntegration) {
+        ankiIntegration.destroy();
       }
     });
 
@@ -635,6 +688,11 @@ class MpvIpcClient {
   public connected = false;
   private reconnectAttempt = 0;
   private firstConnection = true;
+  public currentVideoPath = "";
+  public currentTimePos = 0;
+  public currentSubStart = 0;
+  public currentSubEnd = 0;
+  public currentSubText = "";
 
   constructor(socketPath: string) {
     this.socketPath = socketPath;
@@ -725,17 +783,31 @@ class MpvIpcClient {
     if (msg.event === "property-change") {
       if (msg.name === "sub-text") {
         currentSubText = (msg.data as string) || "";
+        this.currentSubText = currentSubText;
+        if (subtitleTimingTracker && this.currentSubStart !== undefined && this.currentSubEnd !== undefined) {
+          subtitleTimingTracker.recordSubtitle(currentSubText, this.currentSubStart, this.currentSubEnd);
+        }
         broadcastSubtitle(currentSubText);
         if (mainWindow && !mainWindow.isDestroyed()) {
           const subtitleData = await tokenizeSubtitle(currentSubText);
           mainWindow.webContents.send("subtitle:set", subtitleData);
         }
+      } else if (msg.name === "sub-start") {
+        this.currentSubStart = (msg.data as number) || 0;
+      } else if (msg.name === "sub-end") {
+        this.currentSubEnd = (msg.data as number) || 0;
+      } else if (msg.name === "time-pos") {
+        this.currentTimePos = (msg.data as number) || 0;
       } else if (msg.name === "path") {
+        this.currentVideoPath = (msg.data as string) || "";
         updateCurrentMediaPath(msg.data);
       }
     } else if (msg.data !== undefined && msg.request_id) {
       if (msg.request_id === MPV_REQUEST_ID_SUBTEXT) {
         currentSubText = (msg.data as string) || "";
+        if (mpvClient) {
+          mpvClient.currentSubText = currentSubText;
+        }
         broadcastSubtitle(currentSubText);
         if (mainWindow && !mainWindow.isDestroyed()) {
           tokenizeSubtitle(currentSubText).then((subtitleData) => {
@@ -760,6 +832,9 @@ class MpvIpcClient {
   private subscribeToProperties(): void {
     this.send({ command: ["observe_property", 1, "sub-text"] });
     this.send({ command: ["observe_property", 2, "path"] });
+    this.send({ command: ["observe_property", 3, "sub-start"] });
+    this.send({ command: ["observe_property", 4, "sub-end"] });
+    this.send({ command: ["observe_property", 5, "time-pos"] });
   }
 
   private getInitialState(): void {
@@ -1167,4 +1242,68 @@ ipcMain.on("mpv-command", (_event: IpcMainEvent, command: string[]) => {
 
 ipcMain.handle("get-keybindings", () => {
   return keybindings;
+});
+
+ipcMain.handle("get-anki-connect-status", () => {
+  return ankiIntegration !== null;
+});
+
+ipcMain.on("set-anki-connect-enabled", (_event: IpcMainEvent, enabled: boolean) => {
+  const { config } = loadConfig();
+  if (!config.ankiConnect) {
+    config.ankiConnect = {};
+  }
+  config.ankiConnect.enabled = enabled;
+  saveConfig(config);
+
+  if (enabled && !ankiIntegration && subtitleTimingTracker && mpvClient) {
+    ankiIntegration = new AnkiIntegration(
+      config.ankiConnect,
+      subtitleTimingTracker,
+      mpvClient,
+      (text: string) => {
+        if (mpvClient) {
+          mpvClient.send({
+            command: ["show-text", text, "3000"],
+          });
+        }
+      },
+      (title: string, options: any) => {
+        const notificationOptions: any = { title };
+
+        if (options.body) {
+          notificationOptions.body = options.body;
+        }
+
+        if (options.icon) {
+          if (typeof options.icon === 'string' && options.icon.startsWith('data:image/')) {
+            const base64Data = options.icon.replace(/^data:image\/\w+;base64,/, '');
+            try {
+              notificationOptions.icon = nativeImage.createFromBuffer(Buffer.from(base64Data, 'base64'));
+            } catch (err) {
+              console.error('Failed to create notification icon from base64:', err);
+            }
+          } else {
+            notificationOptions.icon = options.icon;
+          }
+        }
+
+        const notification = new Notification(notificationOptions);
+        notification.show();
+      },
+    );
+    ankiIntegration.start();
+    console.log("AnkiConnect integration enabled");
+  } else if (!enabled && ankiIntegration) {
+    ankiIntegration.destroy();
+    ankiIntegration = null;
+    console.log("AnkiConnect integration disabled");
+  }
+});
+
+ipcMain.on("clear-anki-connect-history", () => {
+  if (subtitleTimingTracker) {
+    subtitleTimingTracker.cleanup();
+    console.log("AnkiConnect subtitle timing history cleared");
+  }
 });

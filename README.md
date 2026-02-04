@@ -12,6 +12,7 @@ An all-in-one sentence mining overlay for MPV with AnkiConnect and dictionary (Y
 - Japanese text tokenization using MeCab with smart word boundary detection
 - Integrated texthooker-ui server for use with Yomitan
 - Integrated websocket server (if [mpv_websocket](https://github.com/kuroahna/mpv_websocket) is not found) to send lines to the texthooker
+- AnkiConnect integration for automatic card creation with media (audio/image)
 
 ## Demo
 
@@ -330,6 +331,60 @@ By default, the server uses "auto" mode: it starts automatically unless [mpv_web
 | --------- | ------------------------- | -------------------------------------------------------- |
 | `enabled` | `true`, `false`, `"auto"` | `"auto"` (default) disables if mpv_websocket is detected |
 | `port`    | number                    | WebSocket server port (default: 6677)                    |
+
+### AnkiConnect
+
+Enable automatic Anki card creation and updates with media generation:
+
+```json
+{
+  "ankiConnect": {
+    "enabled": true,
+    "url": "http://127.0.0.1:8765",
+    "pollingRate": 3000,
+    "deck": "Learning::Japanese",
+    "audioField": "ExpressionAudio",
+    "imageField": "Picture",
+    "sentenceField": "Sentence",
+    "generateAudio": true,
+    "generateImage": true,
+    "imageType": "static",
+    "imageFormat": "jpg",
+    "audioPadding": 0.5,
+    "fallbackDuration": 3.0,
+    "overwriteAudio": true,
+    "overwriteImage": true,
+    "miscInfoField": "Info",
+    "miscInfoPattern": "[mpv-yomitan] %f (%t)",
+    "highlightWord": true,
+    "showNotificationOnUpdate": false
+  }
+}
+```
+
+| Option                   | Values                 | Description                                                                |
+| ------------------------ | ---------------------- | -------------------------------------------------------------------------- |
+| `enabled`                | `true`, `false`        | Enable AnkiConnect integration (default: `false`)                         |
+| `url`                    | string (URL)           | AnkiConnect API URL (default: `http://127.0.0.1:8765`)                   |
+| `pollingRate`            | number (ms)            | How often to check for new cards (default: `3000`)                        |
+| `deck`                   | string                 | Anki deck to monitor for new cards                                        |
+| `audioField`             | string                 | Card field for audio files (default: `ExpressionAudio`)                  |
+| `imageField`             | string                 | Card field for images (default: `Picture`)                                |
+| `sentenceField`          | string                 | Card field for sentences (default: `Sentence`)                            |
+| `generateAudio`          | `true`, `false`        | Generate audio clips from video (default: `true`)                         |
+| `generateImage`          | `true`, `false`        | Generate image/animation screenshots (default: `true`)                    |
+| `imageType`              | `"static"`, `"avif"`   | Image type: static screenshot or animated AVIF (default: `"static"`)     |
+| `imageFormat`            | `"jpg"`, `"png"`, `"webp"` | Image format (default: `"jpg"`)                                       |
+| `audioPadding`           | number (seconds)       | Padding around audio clip timing (default: `0.5`)                         |
+| `fallbackDuration`       | number (seconds)       | Default duration if timing unavailable (default: `3.0`)                   |
+| `overwriteAudio`         | `true`, `false`        | Replace existing audio on updates (default: `true`)                       |
+| `overwriteImage`         | `true`, `false`        | Replace existing images on updates (default: `true`)                      |
+| `miscInfoField`          | string                 | Card field for metadata (optional)                                        |
+| `miscInfoPattern`        | string                 | Format pattern for metadata: `%f`=filename, `%F`=filename+ext, `%t`=time |
+| `highlightWord`          | `true`, `false`        | Highlight the word in sentence context (default: `true`)                  |
+| `showNotificationOnUpdate` | `true`, `false`      | Show desktop notification when cards update (default: `false`)            |
+
+**Requirements:** [AnkiConnect](https://github.com/FooSoft/anki-connect) plugin must be installed and running in Anki. ffmpeg must be installed for media generation.
 
 ### Keybindings
 
