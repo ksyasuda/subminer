@@ -410,13 +410,9 @@ function handleCliCommand(argv: string[]): void {
       openYomitanSettings();
     }, 1000);
   } else if (argv.includes("--show")) {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.show();
-    }
+    setOverlayVisible(true);
   } else if (argv.includes("--hide")) {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.hide();
-    }
+    setOverlayVisible(false);
   } else if (argv.includes("--texthooker")) {
     if (!texthookerServer) {
       startTexthookerServer();
@@ -925,7 +921,7 @@ ipcMain.on("toggle-dev-tools", () => {
   }
 });
 
-ipcMain.handle("get-sub-visibility", () => {
+ipcMain.handle("get-overlay-visibility", () => {
   return overlayVisible;
 });
 

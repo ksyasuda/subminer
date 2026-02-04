@@ -28,7 +28,7 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on("mpv:subVisibility", (_event: IpcRendererEvent, visible: boolean) => callback(visible));
   },
 
-  getSubVisibility: (): Promise<boolean> => ipcRenderer.invoke("get-sub-visibility"),
+  getOverlayVisibility: (): Promise<boolean> => ipcRenderer.invoke("get-overlay-visibility"),
   getCurrentSubtitle: (): Promise<SubtitleData> => ipcRenderer.invoke("get-current-subtitle"),
 
   setIgnoreMouseEvents: (ignore: boolean, options?: { forward?: boolean }) => {

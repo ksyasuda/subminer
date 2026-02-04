@@ -97,7 +97,7 @@ export interface MecabStatus {
 export interface ElectronAPI {
   onSubtitle: (callback: (data: SubtitleData) => void) => void;
   onVisibility: (callback: (visible: boolean) => void) => void;
-  getSubVisibility: () => Promise<boolean>;
+  getOverlayVisibility: () => Promise<boolean>;
   getCurrentSubtitle: () => Promise<SubtitleData>;
   setIgnoreMouseEvents: (ignore: boolean, options?: { forward?: boolean }) => void;
   openYomitanSettings: () => void;
