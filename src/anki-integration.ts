@@ -1,5 +1,5 @@
 /*
- * mpv-yomitan - Yomitan integration for mpv
+ * SubMiner - Subtitle mining overlay for mpv
  * Copyright (C) 2024 sudacode
  *
  * This program is free software: you can redistribute it and/or modify
@@ -64,7 +64,7 @@ export class AnkiIntegration {
       mediaInsertMode: "append",
       audioPadding: 0.5,
       fallbackDuration: 3.0,
-      miscInfoPattern: "[mpv-yomitan] %f (%t)",
+      miscInfoPattern: "[SubMiner] %f (%t)",
       notificationType: "osd",
       imageQuality: 92,
       animatedFps: 10,
@@ -414,7 +414,7 @@ export class AnkiIntegration {
     }
 
     if ((type === "system" || type === "both") && this.notificationCallback) {
-      this.notificationCallback("mpv-yomitan", { body: message });
+      this.notificationCallback("SubMiner", { body: message });
     }
   }
 

@@ -1,7 +1,7 @@
 /**
- * mpv-yomitan Example Configuration File
+ * SubMiner Example Configuration File
  *
- * Copy this file to: ~/.config/mpv-yomitan-overlay/config.json
+ * Copy this file to: ~/.config/subminer/config.json
  * (Remove the comments if your JSON parser doesn't support JSONC)
  *
  * This file shows all available configuration options with their default values.
@@ -83,7 +83,7 @@
 
     // Metadata field
     "miscInfoField": "Info", // optional, null to disable
-    "miscInfoPattern": "[mpv-yomitan] %f (%t)", // %f=filename, %F=filename+ext, %t=time
+    "miscInfoPattern": "[SubMiner] %f (%t)", // %f=filename, %F=filename+ext, %t=time
 
     // UI options
     "highlightWord": true,

@@ -1,5 +1,5 @@
 /*
- * mpv-yomitan - Yomitan integration for mpv
+ * SubMiner - Subtitle mining overlay for mpv
  * Copyright (C) 2024 sudacode
  *
  * This program is free software: you can redistribute it and/or modify
@@ -26,8 +26,8 @@ export class MediaGenerator {
   private notifyIconDir: string;
 
   constructor(tempDir?: string) {
-    this.tempDir = tempDir || path.join(os.tmpdir(), "mpv-yomitan-media");
-    this.notifyIconDir = path.join(os.tmpdir(), "mpv-yomitan-notify");
+    this.tempDir = tempDir || path.join(os.tmpdir(), "subminer-media");
+    this.notifyIconDir = path.join(os.tmpdir(), "subminer-notify");
     if (!fs.existsSync(this.tempDir)) {
       fs.mkdirSync(this.tempDir, { recursive: true });
     }
