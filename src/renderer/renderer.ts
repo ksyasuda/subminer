@@ -40,9 +40,13 @@ interface SubtitlePosition {
   yPercent: number;
 }
 
+type SecondarySubMode = "hidden" | "visible" | "hover";
+
 const subtitleRoot = document.getElementById('subtitleRoot')!;
 const subtitleContainer = document.getElementById('subtitleContainer')!;
 const overlay = document.getElementById('overlay')!;
+const secondarySubContainer = document.getElementById('secondarySubContainer')!;
+const secondarySubRoot = document.getElementById('secondarySubRoot')!;
 
 let isOverSubtitle = false;
 let isDragging = false;
@@ -411,6 +415,39 @@ function setupYomitanObserver(): void {
   });
 }
 
+function renderSecondarySub(text: string): void {
+  secondarySubRoot.innerHTML = '';
+  if (!text) return;
+
+  let normalized = text
+    .replace(/\\N/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\{[^}]*\}/g, '')
+    .trim();
+
+  if (!normalized) return;
+
+  const lines = normalized.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i]) {
+      const textNode = document.createTextNode(lines[i]);
+      secondarySubRoot.appendChild(textNode);
+    }
+    if (i < lines.length - 1) {
+      secondarySubRoot.appendChild(document.createElement('br'));
+    }
+  }
+}
+
+function updateSecondarySubMode(mode: SecondarySubMode): void {
+  secondarySubContainer.classList.remove(
+    'secondary-sub-hidden',
+    'secondary-sub-visible',
+    'secondary-sub-hover'
+  );
+  secondarySubContainer.classList.add(`secondary-sub-${mode}`);
+}
+
 async function init(): Promise<void> {
   window.electronAPI.onSubtitle((data: SubtitleData) => {
     renderSubtitle(data);
@@ -423,8 +460,25 @@ async function init(): Promise<void> {
   const initialSubtitle = await window.electronAPI.getCurrentSubtitle();
   renderSubtitle(initialSubtitle);
 
+  window.electronAPI.onSecondarySub((text: string) => {
+    renderSecondarySub(text);
+  });
+
+  window.electronAPI.onSecondarySubMode((mode: SecondarySubMode) => {
+    updateSecondarySubMode(mode);
+  });
+
+  const initialMode = await window.electronAPI.getSecondarySubMode();
+  updateSecondarySubMode(initialMode);
+
+  const initialSecondary = await window.electronAPI.getCurrentSecondarySub();
+  renderSecondarySub(initialSecondary);
+
   subtitleContainer.addEventListener('mouseenter', handleMouseEnter);
   subtitleContainer.addEventListener('mouseleave', handleMouseLeave);
+
+  secondarySubContainer.addEventListener('mouseenter', handleMouseEnter);
+  secondarySubContainer.addEventListener('mouseleave', handleMouseLeave);
 
   setupDragging();
 

@@ -13,6 +13,7 @@ An all-in-one sentence mining overlay for MPV with AnkiConnect and dictionary (Y
 - Integrated texthooker-ui server for use with Yomitan
 - Integrated websocket server (if [mpv_websocket](https://github.com/kuroahna/mpv_websocket) is not found) to send lines to the texthooker
 - AnkiConnect integration for automatic card creation with media (audio/image)
+- Secondary subtitle display with configurable display modes (hidden, visible, hover)
 
 ## Demo
 
@@ -431,6 +432,7 @@ When `autoUpdateNewCards` is set to `false`, new cards are detected but not auto
 | `Ctrl+V`       | Update the last added Anki card using subtitles from clipboard                                            |
 | `Ctrl+S`       | Create a sentence card from the current subtitle line                                                     |
 | `Ctrl+Shift+S` | Enter multi-mine mode. Press `1-9` to create a sentence card from that many recent lines, or `Esc` to cancel |
+| `Ctrl+Shift+V` | Cycle secondary subtitle display mode (hidden → visible → hover) |
 
 To copy multiple lines (current + previous):
 
@@ -466,6 +468,7 @@ Customize or disable the overlay keyboard shortcuts:
 | `mineSentence`                | string \| `null` | Accelerator for creating sentence card from current subtitle (default: `"CommandOrControl+S"`) |
 | `mineSentenceMultiple`        | string \| `null` | Accelerator for multi-mine sentence card mode (default: `"CommandOrControl+Shift+S"`) |
 | `multiCopyTimeoutMs`          | number           | Timeout in ms for multi-copy/mine digit input (default: `3000`)                |
+| `toggleSecondarySub`          | string \| `null` | Accelerator for cycling secondary subtitle mode (default: `"CommandOrControl+Shift+V"`) |
 
 Set any shortcut to `null` to disable it.
 
@@ -498,6 +501,32 @@ Add a `keybindings` array to configure keyboard shortcuts that send commands to 
 ```
 
 **Supported commands:** Any valid mpv JSON IPC command array (`["cycle", "pause"]`, `["seek", 5]`, `["script-binding", "..."]`, etc.)
+
+### Secondary Subtitles
+
+Display a second subtitle track (e.g., English alongside Japanese) in the overlay:
+
+```json
+{
+  "secondarySub": {
+    "secondarySubLanguages": ["eng", "en"],
+    "autoLoadSecondarySub": true,
+    "defaultMode": "hover"
+  }
+}
+```
+
+| Option                    | Values           | Description                                                    |
+| ------------------------- | ---------------- | -------------------------------------------------------------- |
+| `secondarySubLanguages`   | string[]         | Language codes to auto-load (e.g., `["eng", "en"]`)            |
+| `autoLoadSecondarySub`    | `true`, `false`  | Auto-detect and load matching secondary subtitle track         |
+| `defaultMode`             | `"hidden"`, `"visible"`, `"hover"` | Initial display mode (default: `"hover"`)    |
+
+**Display modes:**
+
+- **hidden** — Secondary subtitles not shown
+- **visible** — Always visible at top of overlay
+- **hover** — Only visible when hovering over the subtitle area (default)
 
 ## Environment Variables
 

@@ -71,6 +71,14 @@ export interface Keybinding {
   command: string[] | null;
 }
 
+export type SecondarySubMode = "hidden" | "visible" | "hover";
+
+export interface SecondarySubConfig {
+  secondarySubLanguages?: string[];
+  autoLoadSecondarySub?: boolean;
+  defaultMode?: SecondarySubMode;
+}
+
 export interface WebSocketConfig {
   enabled?: boolean | "auto";
   port?: number;
@@ -123,6 +131,7 @@ export interface ShortcutsConfig {
   mineSentence?: string | null;
   mineSentenceMultiple?: string | null;
   multiCopyTimeoutMs?: number;
+  toggleSecondarySub?: string | null;
 }
 
 export interface Config {
@@ -133,6 +142,7 @@ export interface Config {
   texthooker?: TexthookerConfig;
   ankiConnect?: AnkiConnectConfig;
   shortcuts?: ShortcutsConfig;
+  secondarySub?: SecondarySubConfig;
   auto_start_overlay?: boolean;
 }
 
@@ -171,6 +181,10 @@ export interface ElectronAPI {
   getAnkiConnectStatus: () => Promise<boolean>;
   setAnkiConnectEnabled: (enabled: boolean) => void;
   clearAnkiConnectHistory: () => void;
+  onSecondarySub: (callback: (text: string) => void) => void;
+  onSecondarySubMode: (callback: (mode: SecondarySubMode) => void) => void;
+  getSecondarySubMode: () => Promise<SecondarySubMode>;
+  getCurrentSecondarySub: () => Promise<string>;
 }
 
 declare global {

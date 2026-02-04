@@ -61,6 +61,7 @@ import {
   SubtitlePosition,
   Keybinding,
   WindowGeometry,
+  SecondarySubMode,
 } from "./types";
 import { SubtitleTimingTracker } from "./subtitle-timing-tracker";
 import { AnkiIntegration } from "./anki-integration";
@@ -227,6 +228,8 @@ let mecabTokenizer: MecabTokenizer | null = null;
 let keybindings: Keybinding[] = [];
 let subtitleTimingTracker: SubtitleTimingTracker | null = null;
 let ankiIntegration: AnkiIntegration | null = null;
+let secondarySubMode: SecondarySubMode = "hover";
+let previousSecondarySubVisibility: boolean | null = null;
 
 // Shortcut state tracking
 let shortcutsRegistered = false;
@@ -516,6 +519,7 @@ if (!gotTheLock) {
       mpvClient.connect();
 
       const { config } = loadConfig();
+      secondarySubMode = config.secondarySub?.defaultMode ?? "hover";
       const wsConfig = config.websocket || {};
       const wsEnabled = wsConfig.enabled ?? "auto";
       const wsPort = wsConfig.port || DEFAULT_WEBSOCKET_PORT;
@@ -552,6 +556,7 @@ if (!gotTheLock) {
           if (mainWindow && !mainWindow.isDestroyed()) {
             mainWindow.hide();
           }
+          unregisterOverlayShortcuts();
         };
         windowTracker.start();
       }
@@ -568,29 +573,7 @@ if (!gotTheLock) {
               });
             }
           },
-          (title: string, options: any) => {
-            const notificationOptions: any = { title };
-
-            if (options.body) {
-              notificationOptions.body = options.body;
-            }
-
-            if (options.icon) {
-              if (typeof options.icon === 'string' && options.icon.startsWith('data:image/')) {
-                const base64Data = options.icon.replace(/^data:image\/\w+;base64,/, '');
-                try {
-                  notificationOptions.icon = nativeImage.createFromBuffer(Buffer.from(base64Data, 'base64'));
-                } catch (err) {
-                  console.error('Failed to create notification icon from base64:', err);
-                }
-              } else {
-                notificationOptions.icon = options.icon;
-              }
-            }
-
-            const notification = new Notification(notificationOptions);
-            notification.show();
-          },
+          showDesktopNotification,
         );
         ankiIntegration.start();
       }
@@ -697,6 +680,9 @@ interface MpvMessage {
 
 const MPV_REQUEST_ID_SUBTEXT = 101;
 const MPV_REQUEST_ID_PATH = 102;
+const MPV_REQUEST_ID_SECONDARY_SUBTEXT = 103;
+const MPV_REQUEST_ID_SECONDARY_SUB_VISIBILITY = 104;
+const MPV_REQUEST_ID_TRACK_LIST = 200;
 
 class MpvIpcClient {
   private socketPath: string;
@@ -730,7 +716,9 @@ class MpvIpcClient {
       this.subscribeToProperties();
       this.getInitialState();
 
-      if (this.firstConnection && autoStartOverlay) {
+      const shouldAutoStart =
+        autoStartOverlay || loadConfig().config.auto_start_overlay !== false;
+      if (this.firstConnection && shouldAutoStart) {
         console.log("Auto-starting overlay, hiding mpv subtitles");
         setTimeout(() => {
           setOverlayVisible(true);
@@ -838,14 +826,33 @@ class MpvIpcClient {
         }
       } else if (msg.name === "secondary-sub-text") {
         this.currentSecondarySubText = (msg.data as string) || "";
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send("secondary-subtitle:set", this.currentSecondarySubText);
+        }
       } else if (msg.name === "time-pos") {
         this.currentTimePos = (msg.data as number) || 0;
       } else if (msg.name === "path") {
         this.currentVideoPath = (msg.data as string) || "";
         updateCurrentMediaPath(msg.data);
+        this.autoLoadSecondarySubTrack();
       }
     } else if (msg.data !== undefined && msg.request_id) {
-      if (msg.request_id === MPV_REQUEST_ID_SUBTEXT) {
+      if (msg.request_id === MPV_REQUEST_ID_TRACK_LIST) {
+        const tracks = msg.data as Array<{ type: string; lang?: string; id: number }>;
+        if (Array.isArray(tracks)) {
+          const { config } = loadConfig();
+          const languages = config.secondarySub?.secondarySubLanguages || [];
+          const subTracks = tracks.filter((t) => t.type === "sub");
+          for (const lang of languages) {
+            const match = subTracks.find((t) => t.lang === lang);
+            if (match) {
+              this.send({ command: ["set_property", "secondary-sid", match.id] });
+              showMpvOsd(`Secondary subtitle: ${lang} (track ${match.id})`);
+              break;
+            }
+          }
+        }
+      } else if (msg.request_id === MPV_REQUEST_ID_SUBTEXT) {
         currentSubText = (msg.data as string) || "";
         if (mpvClient) {
           mpvClient.currentSubText = currentSubText;
@@ -858,8 +865,27 @@ class MpvIpcClient {
         }
       } else if (msg.request_id === MPV_REQUEST_ID_PATH) {
         updateCurrentMediaPath(msg.data);
+      } else if (msg.request_id === MPV_REQUEST_ID_SECONDARY_SUBTEXT) {
+        this.currentSecondarySubText = (msg.data as string) || "";
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send("secondary-subtitle:set", this.currentSecondarySubText);
+        }
+      } else if (msg.request_id === MPV_REQUEST_ID_SECONDARY_SUB_VISIBILITY) {
+        previousSecondarySubVisibility = msg.data === true || msg.data === "yes";
+        this.send({ command: ["set_property", "secondary-sub-visibility", "no"] });
       }
     }
+  }
+
+  private autoLoadSecondarySubTrack(): void {
+    const { config } = loadConfig();
+    if (!config.secondarySub?.autoLoadSecondarySub) return;
+    const languages = config.secondarySub.secondarySubLanguages;
+    if (!languages || languages.length === 0) return;
+
+    setTimeout(() => {
+      this.send({ command: ["get_property", "track-list"], request_id: MPV_REQUEST_ID_TRACK_LIST });
+    }, 500);
   }
 
   send(command: { command: unknown[]; request_id?: number }): boolean {
@@ -883,6 +909,7 @@ class MpvIpcClient {
   private getInitialState(): void {
     this.send({ command: ["get_property", "sub-text"], request_id: MPV_REQUEST_ID_SUBTEXT });
     this.send({ command: ["get_property", "path"], request_id: MPV_REQUEST_ID_PATH });
+    this.send({ command: ["get_property", "secondary-sub-text"], request_id: MPV_REQUEST_ID_SECONDARY_SUBTEXT });
   }
 
   setSubVisibility(visible: boolean): void {
@@ -932,55 +959,6 @@ function updateOverlayBounds(geometry: WindowGeometry): void {
     width: geometry.width,
     height: geometry.height,
   });
-}
-
-function updateOverlayVisibility(): void {
-  console.log("updateOverlayVisibility called, overlayVisible:", overlayVisible);
-  if (!mainWindow || mainWindow.isDestroyed()) {
-    console.log("mainWindow not available");
-    return;
-  }
-
-  if (!overlayVisible) {
-    console.log("Hiding overlay");
-    mainWindow.hide();
-  } else {
-    console.log(
-      "Should show overlay, isTracking:",
-      windowTracker?.isTracking(),
-    );
-    const geometry = windowTracker?.getGeometry();
-    console.log("Geometry:", geometry);
-
-    if (geometry) {
-      updateOverlayBounds(geometry);
-      console.log("Showing mainWindow");
-      mainWindow.show();
-      return;
-    }
-
-    if (windowTracker) {
-      console.log("No window geometry available yet, showing without tracking");
-      mainWindow.show();
-      return;
-    }
-
-    const primaryDisplay = screen.getPrimaryDisplay();
-    mainWindow.setBounds(primaryDisplay.bounds);
-    mainWindow.show();
-  }
-}
-
-function setOverlayVisible(visible: boolean): void {
-  overlayVisible = visible;
-  updateOverlayVisibility();
-  if (mpvClient && mpvClient.connected) {
-    mpvClient.setSubVisibility(!visible);
-  }
-}
-
-function toggleOverlay(): void {
-  setOverlayVisible(!overlayVisible);
 }
 
 function ensureExtensionCopy(sourceDir: string): string {
@@ -1257,6 +1235,8 @@ function getConfiguredShortcuts() {
     mineSentenceMultiple:
       config.shortcuts?.mineSentenceMultiple ?? "CommandOrControl+Shift+S",
     multiCopyTimeoutMs: config.shortcuts?.multiCopyTimeoutMs ?? 3000,
+    toggleSecondarySub:
+      config.shortcuts?.toggleSecondarySub ?? "CommandOrControl+Shift+V",
   };
 }
 
@@ -1530,6 +1510,18 @@ function registerOverlayShortcuts(): void {
     });
   }
 
+  if (shortcuts.toggleSecondarySub) {
+    globalShortcut.register(shortcuts.toggleSecondarySub, () => {
+      const cycle: SecondarySubMode[] = ["hidden", "visible", "hover"];
+      const idx = cycle.indexOf(secondarySubMode);
+      secondarySubMode = cycle[(idx + 1) % cycle.length];
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("secondary-subtitle:mode", secondarySubMode);
+      }
+      showMpvOsd(`Secondary subtitle: ${secondarySubMode}`);
+    });
+  }
+
   shortcutsRegistered = true;
 }
 
@@ -1556,9 +1548,71 @@ function unregisterOverlayShortcuts(): void {
   if (shortcuts.mineSentenceMultiple) {
     globalShortcut.unregister(shortcuts.mineSentenceMultiple);
   }
+  if (shortcuts.toggleSecondarySub) {
+    globalShortcut.unregister(shortcuts.toggleSecondarySub);
+  }
 
   shortcutsRegistered = false;
 }
+
+function updateOverlayVisibility(): void {
+  console.log("updateOverlayVisibility called, overlayVisible:", overlayVisible);
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    console.log("mainWindow not available");
+    return;
+  }
+
+  if (!overlayVisible) {
+    console.log("Hiding overlay");
+    mainWindow.hide();
+    unregisterOverlayShortcuts();
+
+    if (previousSecondarySubVisibility !== null && mpvClient && mpvClient.connected) {
+      mpvClient.send({
+        command: ["set_property", "secondary-sub-visibility", previousSecondarySubVisibility ? "yes" : "no"],
+      });
+      previousSecondarySubVisibility = null;
+    }
+  } else {
+    console.log(
+      "Should show overlay, isTracking:",
+      windowTracker?.isTracking(),
+    );
+
+    if (mpvClient && mpvClient.connected) {
+      mpvClient.send({ command: ["get_property", "secondary-sub-visibility"], request_id: MPV_REQUEST_ID_SECONDARY_SUB_VISIBILITY });
+    }
+
+    if (windowTracker && windowTracker.isTracking()) {
+      const geometry = windowTracker.getGeometry();
+      console.log("Geometry:", geometry);
+      if (geometry) {
+        updateOverlayBounds(geometry);
+      }
+      console.log("Showing mainWindow");
+      mainWindow.show();
+      mainWindow.focus();
+      registerOverlayShortcuts();
+    } else if (!windowTracker) {
+      mainWindow.show();
+      mainWindow.focus();
+      registerOverlayShortcuts();
+    }
+  }
+}
+
+function setOverlayVisible(visible: boolean): void {
+  overlayVisible = visible;
+  updateOverlayVisibility();
+  if (mpvClient && mpvClient.connected) {
+    mpvClient.setSubVisibility(!visible);
+  }
+}
+
+function toggleOverlay(): void {
+  setOverlayVisible(!overlayVisible);
+}
+
 
 ipcMain.on(
   "set-ignore-mouse-events",
@@ -1637,6 +1691,14 @@ ipcMain.on("mpv-command", (_event: IpcMainEvent, command: string[]) => {
 
 ipcMain.handle("get-keybindings", () => {
   return keybindings;
+});
+
+ipcMain.handle("get-secondary-sub-mode", () => {
+  return secondarySubMode;
+});
+
+ipcMain.handle("get-current-secondary-sub", () => {
+  return mpvClient?.currentSecondarySubText || "";
 });
 
 ipcMain.handle("get-anki-connect-status", () => {

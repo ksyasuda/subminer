@@ -24,6 +24,7 @@ import type {
   MecabStatus,
   Keybinding,
   ElectronAPI,
+  SecondarySubMode,
 } from "./types";
 
 const electronAPI: ElectronAPI = {
@@ -88,6 +89,17 @@ const electronAPI: ElectronAPI = {
   clearAnkiConnectHistory: () => {
     ipcRenderer.send("clear-anki-connect-history");
   },
+
+  onSecondarySub: (callback: (text: string) => void) => {
+    ipcRenderer.on("secondary-subtitle:set", (_event: IpcRendererEvent, text: string) => callback(text));
+  },
+
+  onSecondarySubMode: (callback: (mode: SecondarySubMode) => void) => {
+    ipcRenderer.on("secondary-subtitle:mode", (_event: IpcRendererEvent, mode: SecondarySubMode) => callback(mode));
+  },
+
+  getSecondarySubMode: (): Promise<SecondarySubMode> => ipcRenderer.invoke("get-secondary-sub-mode"),
+  getCurrentSecondarySub: (): Promise<string> => ipcRenderer.invoke("get-current-secondary-sub"),
 };
 
 contextBridge.exposeInMainWorld("electronAPI", electronAPI);
