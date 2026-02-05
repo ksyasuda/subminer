@@ -18,3 +18,5 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+environment.toml
