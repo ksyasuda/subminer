@@ -57,7 +57,6 @@ const electronAPI: ElectronAPI = {
   saveSubtitlePosition: (position: SubtitlePosition) => {
     ipcRenderer.send("save-subtitle-position", position);
   },
-  getSubtitleStyle: (): Promise<SubtitleStyle> => ipcRenderer.invoke("get-subtitle-style"),
 
   getMecabStatus: (): Promise<MecabStatus> => ipcRenderer.invoke("get-mecab-status"),
   setMecabEnabled: (enabled: boolean) => {

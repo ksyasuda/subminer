@@ -188,7 +188,6 @@ export interface ElectronAPI {
   openYomitanSettings: () => void;
   getSubtitlePosition: () => Promise<SubtitlePosition | null>;
   saveSubtitlePosition: (position: SubtitlePosition) => void;
-  getSubtitleStyle: () => Promise<SubtitleStyle>;
   getMecabStatus: () => Promise<MecabStatus>;
   setMecabEnabled: (enabled: boolean) => void;
   sendMpvCommand: (command: (string | number)[]) => void;
