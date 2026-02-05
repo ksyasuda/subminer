@@ -385,8 +385,10 @@ async function restoreSubtitlePosition(): Promise<void> {
 
 async function restoreSubtitleFontSize(): Promise<void> {
   const style = await window.electronAPI.getSubtitleStyle();
-  applySubtitleFontSize(style.fontSize);
-  console.log('Applied subtitle font size:', style.fontSize);
+  if (style && style.fontSize !== undefined) {
+    applySubtitleFontSize(style.fontSize);
+    console.log('Applied subtitle font size:', style.fontSize);
+  }
 }
 
 function setupSelectionObserver(): void {
