@@ -55,7 +55,7 @@ subminer - Launch MPV with SubMiner sentence mining overlay
 Usage: $(basename "$0") [OPTIONS] [FILE|DIRECTORY]
 
 Options:
-  -b, --backend BACKEND  Display backend to use: auto, hyprland, sway, x11 (default: auto)
+  -b, --backend BACKEND  Display backend to use: auto, hyprland, sway, x11, macos (default: auto)
   -d, --directory DIR    Directory to browse for videos (default: current directory)
   -r, --recursive        Search for videos recursively
   -p, --profile PROFILE  MPV profile to use
@@ -130,7 +130,9 @@ detect_backend() {
 		return
 	fi
 
-	if [[ -n "$HYPRLAND_INSTANCE_SIGNATURE" ]]; then
+	if [[ "$(uname -s)" = "Darwin" ]]; then
+		echo "macos"
+	elif [[ -n "$HYPRLAND_INSTANCE_SIGNATURE" ]]; then
 		echo "hyprland"
 	elif [[ -n "$SWAYSOCK" ]]; then
 		echo "sway"
@@ -174,8 +176,13 @@ find_videos() {
 	fi
 
 	# shellcheck disable=SC2312
-	find "$dir" "${find_opts[@]}" -type f -regextype posix-extended \
-		-iregex ".*\.($VIDEO_EXTENSIONS)$" 2> /dev/null | sort -V
+	if [[ "$(uname -s)" = "Darwin" ]]; then
+		find -E "$dir" "${find_opts[@]}" -type f \
+			-iregex ".*\.($VIDEO_EXTENSIONS)$" 2> /dev/null | sort
+	else
+		find "$dir" "${find_opts[@]}" -type f -regextype posix-extended \
+			-iregex ".*\.($VIDEO_EXTENSIONS)$" 2> /dev/null | sort -V
+	fi
 }
 
 build_rofi_menu() {
@@ -185,12 +192,23 @@ build_rofi_menu() {
 		[[ -z "$video" ]] && continue
 		local display_name
 		if [[ "$RECURSIVE" = true ]]; then
-			display_name=$(realpath --relative-to="$dir" "$video")
+			display_name="${video#"$dir"/}"
 		else
 			display_name=$(basename "$video")
 		fi
 		printf '%s\0icon\x1fthumbnail://%s\n' "$display_name" "$video"
 	done < <(find_videos "$dir" || true)
+}
+
+build_fzf_menu() {
+    local dir="$1"
+
+    while IFS= read -r video; do
+        [[ -z "$video" ]] && continue
+        local display_name
+        display_name=$(basename "$video")
+        printf '%s\t%s\n' "$display_name" "$video"
+    done < <(find_videos "$dir")
 }
 
 show_rofi_menu() {
@@ -233,10 +251,14 @@ show_fzf_menu() {
 	local preview_cmd
 	if command -v chafa &> /dev/null; then
 		preview_cmd="
-            video={}
+            video={2}
             thumb_dir=\"\$HOME/.cache/thumbnails/large\"
             video_uri=\"file://\$(realpath \"\$video\")\"
-            thumb_hash=\$(echo -n \"\$video_uri\" | md5sum | cut -d' ' -f1)
+            if command -v md5sum &>/dev/null; then
+                thumb_hash=\$(echo -n \"\$video_uri\" | md5sum | cut -d' ' -f1)
+            else
+                thumb_hash=\$(echo -n \"\$video_uri\" | md5 -q)
+            fi
             thumb_path=\"\$thumb_dir/\$thumb_hash.png\"
 
             get_thumb() {
@@ -260,10 +282,12 @@ show_fzf_menu() {
 
 	local selection
 	# shellcheck disable=SC2312
-	selection=$(find_videos "$dir" | fzf \
+	selection=$(build_fzf_menu "$dir" | fzf \
 		--ansi \
 		--reverse \
 		--prompt="Select Video: " \
+		--delimiter=$'\t' \
+		--with-nth=1 \
 		--preview-window=right:50%:wrap \
 		--preview "$preview_cmd")
 
@@ -271,13 +295,27 @@ show_fzf_menu() {
 		return 0
 	fi
 
-	echo "$selection"
+	echo "${selection#*$'\t'}"
 }
 
 find_appimage() {
 	if [[ -n "$SUBMINER_APPIMAGE_PATH" ]] && [[ -x "$SUBMINER_APPIMAGE_PATH" ]]; then
 		echo "$SUBMINER_APPIMAGE_PATH"
 		return 0
+	fi
+
+	if [[ "$(uname -s)" = "Darwin" ]]; then
+		local mac_candidates=(
+			"/Applications/SubMiner.app/Contents/MacOS/subminer"
+			"/Applications/subminer.app/Contents/MacOS/subminer"
+		)
+		local candidate
+		for candidate in "${mac_candidates[@]}"; do
+			if [[ -x "$candidate" ]]; then
+				echo "$candidate"
+				return 0
+			fi
+		done
 	fi
 
 	if [[ -x "$HOME/.local/bin/subminer.AppImage" ]]; then
@@ -290,9 +328,15 @@ find_appimage() {
 		return 0
 	fi
 
-	if command -v subminer &> /dev/null; then
-		echo "subminer"
-		return 0
+	local cmd_path
+	cmd_path="$(command -v subminer 2> /dev/null || true)"
+	if [[ -n "$cmd_path" ]]; then
+		local self_path
+		self_path="$(realpath "$0")"
+		if [[ "$(realpath "$cmd_path")" != "$self_path" ]]; then
+			echo "$cmd_path"
+			return 0
+		fi
 	fi
 
 	return 1
@@ -357,23 +401,15 @@ cleanup() {
 }
 
 parse_args() {
-	local opts
-	opts=$(getopt -o b:d:rp:RTh --long backend:,directory:,recursive,profile:,rofi,no-texthooker,help -n "$(basename "$0")" -- "$@") || {
-		show_help
-		exit 1
-	}
-
-	eval set -- "$opts"
-
-	while true; do
-		case $1 in
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
 			-b | --backend)
 				case "$2" in
-					auto | hyprland | sway | x11)
+					auto | hyprland | sway | x11 | macos)
 						BACKEND="$2"
 						;;
 					*)
-						log_error "Invalid backend: $2 (must be auto, hyprland, sway, or x11)"
+						log_error "Invalid backend: $2 (must be auto, hyprland, sway, x11, or macos)"
 						exit 1
 						;;
 				esac
@@ -406,6 +442,11 @@ parse_args() {
 			--)
 				shift
 				break
+				;;
+			-*)
+				log_error "Unknown option: $1"
+				show_help
+				exit 1
 				;;
 			*)
 				break

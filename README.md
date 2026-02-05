@@ -267,6 +267,27 @@ subminer.AppImage --settings              # Open Yomitan settings
 subminer.AppImage --help                  # Show all options
 ```
 
+### MPV Profile Example (mpv.conf)
+
+Add a profile to `~/.config/mpv/mpv.conf` and launch with `mpv --profile=subminer ...` (or use `subminer -p subminer ...`):
+
+```ini
+[subminer]
+# IPC socket (must match SubMiner config)
+input-ipc-server=/tmp/subminer-socket
+
+# Prefer JP subs, then EN (primary track)
+slang=ja,jpn,en,eng
+
+# Auto-load external subtitles
+sub-auto=fuzzy
+sub-file-paths=.;subs;subtitles
+
+# Show a secondary subtitle track if available
+secondary-sid=auto
+secondary-sub-visibility=yes
+```
+
 ## Keybindings
 
 ### Global Shortcuts
