@@ -102,10 +102,8 @@ pnpm install
 cd vendor/texthooker-ui && pnpm install && pnpm build && cd ../..
 pnpm run build:appimage
 
-# Copy to ~/.local/bin
-cp dist/subminer-*.AppImage ~/.local/bin/subminer.AppImage
-cp subminer ~/.local/bin/
-chmod +x ~/.local/bin/subminer.AppImage ~/.local/bin/subminer
+# Install wrapper script + rofi theme (and AppImage if present)
+make install-linux
 ```
 
 <!-- ### Arch Linux -->

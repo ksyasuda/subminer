@@ -33,6 +33,7 @@
 # If DIRECTORY is provided or no argument, opens rofi/fzf to select a video.
 
 VIDEO_EXTENSIONS="mkv|mp4|avi|webm|mov|flv|wmv|m4v|ts|m2ts"
+ROFI_THEME_FILE="catppuccin-macchiato.rasi"
 
 SEARCH_DIR="."
 RECURSIVE=false
@@ -64,6 +65,7 @@ Options:
 
 Environment:
   SUBMINER_APPIMAGE_PATH      Path to SubMiner AppImage/binary (optional override)
+  SUBMINER_ROFI_THEME         Path to rofi theme file (optional override)
 
 Examples:
   $(basename "$0")                        # Browse current directory with fzf
@@ -75,6 +77,43 @@ Examples:
   $(basename "$0") -b x11 video.mkv       # Force x11 backend
 
 EOF
+}
+
+find_rofi_theme() {
+    if [ -n "${SUBMINER_ROFI_THEME:-}" ] && [ -f "$SUBMINER_ROFI_THEME" ]; then
+        echo "$SUBMINER_ROFI_THEME"
+        return 0
+    fi
+
+    local script_dir
+    script_dir="$(dirname "$(realpath "$0")")"
+
+    local os
+    os="$(uname -s)"
+
+    local candidates=()
+    if [ "$os" = "Darwin" ]; then
+        candidates+=("$HOME/Library/Application Support/SubMiner/themes/$ROFI_THEME_FILE")
+    else
+        local xdg_data_home
+        xdg_data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+        candidates+=("$xdg_data_home/subminer/themes/$ROFI_THEME_FILE")
+        candidates+=("/usr/local/share/subminer/themes/$ROFI_THEME_FILE")
+        candidates+=("/usr/share/subminer/themes/$ROFI_THEME_FILE")
+    fi
+
+    # Backwards compatibility: theme next to the script.
+    candidates+=("$script_dir/$ROFI_THEME_FILE")
+
+    local theme_path
+    for theme_path in "${candidates[@]}"; do
+        if [ -f "$theme_path" ]; then
+            echo "$theme_path"
+            return 0
+        fi
+    done
+
+    return 1
 }
 
 log_info() {
@@ -155,18 +194,20 @@ build_rofi_menu() {
 
 show_rofi_menu() {
     local dir="$1"
-    local theme_path
-    local realpath_result
-    realpath_result=$(realpath "$0")
-    theme_path="$(dirname "$realpath_result")/catppuccin-macchiato.rasi"
+    local theme_path=""
 
     local rofi_opts=(
         -dmenu
         -i
         -p "Select Video "
         -show-icons
-        -theme "$theme_path"
     )
+
+    if theme_path=$(find_rofi_theme); then
+        rofi_opts+=( -theme "$theme_path" )
+    else
+        log_warn "Rofi theme not found; using rofi defaults (set SUBMINER_ROFI_THEME to override)"
+    fi
 
     local selection
     selection=$(build_rofi_menu "$dir" | rofi "${rofi_opts[@]}")
