@@ -304,16 +304,17 @@ export class AnkiIntegration {
   }
 
   private async generateAudio(): Promise<Buffer | null> {
-    if (!this.mpvClient || !this.mpvClient.currentVideoPath) {
+    const mpvClient = this.mpvClient;
+    if (!mpvClient || !mpvClient.currentVideoPath) {
       return null;
     }
 
-    const videoPath = this.mpvClient.currentVideoPath;
-    let startTime = this.mpvClient.currentSubStart;
-    let endTime = this.mpvClient.currentSubEnd;
+    const videoPath = mpvClient.currentVideoPath;
+    let startTime = mpvClient.currentSubStart;
+    let endTime = mpvClient.currentSubEnd;
 
     if (startTime === undefined || endTime === undefined) {
-      const currentTime = this.mpvClient.currentTimePos || 0;
+      const currentTime = mpvClient.currentTimePos || 0;
       const fallback = this.config.fallbackDuration! / 2;
       startTime = currentTime - fallback;
       endTime = currentTime + fallback;
