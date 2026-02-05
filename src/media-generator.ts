@@ -47,10 +47,10 @@ export class MediaGenerator {
       if (!fs.existsSync(this.notifyIconDir)) return;
 
       const files = fs.readdirSync(this.notifyIconDir);
-      const oneHourAgo = Date.now() - (60 * 60 * 1000);
+      const oneHourAgo = Date.now() - 60 * 60 * 1000;
 
       for (const file of files) {
-        if (!file.endsWith('.png')) continue;
+        if (!file.endsWith(".png")) continue;
         const filePath = path.join(this.notifyIconDir, file);
         try {
           const stat = fs.statSync(filePath);
@@ -112,7 +112,9 @@ export class MediaGenerator {
         { timeout: 30000 },
         (error) => {
           if (error) {
-            reject(new Error(`FFmpeg audio generation failed: ${error.message}`));
+            reject(
+              new Error(`FFmpeg audio generation failed: ${error.message}`),
+            );
             return;
           }
 
@@ -157,7 +159,9 @@ export class MediaGenerator {
 
     const vfParts: string[] = [];
     if (maxWidth && maxWidth > 0 && maxHeight && maxHeight > 0) {
-      vfParts.push(`scale=w=${maxWidth}:h=${maxHeight}:force_original_aspect_ratio=decrease`);
+      vfParts.push(
+        `scale=w=${maxWidth}:h=${maxHeight}:force_original_aspect_ratio=decrease`,
+      );
     } else if (maxWidth && maxWidth > 0) {
       vfParts.push(`scale=w=${maxWidth}:h=-2`);
     } else if (maxHeight && maxHeight > 0) {
@@ -182,28 +186,28 @@ export class MediaGenerator {
     args.push("-y");
 
     return new Promise((resolve, reject) => {
-      const outputPath = path.join(this.tempDir, `screenshot_${Date.now()}.${ext}`);
+      const outputPath = path.join(
+        this.tempDir,
+        `screenshot_${Date.now()}.${ext}`,
+      );
       args.push(outputPath);
 
-      execFile(
-        "ffmpeg",
-        args,
-        { timeout: 30000 },
-        (error) => {
-          if (error) {
-            reject(new Error(`FFmpeg screenshot generation failed: ${error.message}`));
-            return;
-          }
+      execFile("ffmpeg", args, { timeout: 30000 }, (error) => {
+        if (error) {
+          reject(
+            new Error(`FFmpeg screenshot generation failed: ${error.message}`),
+          );
+          return;
+        }
 
-          try {
-            const data = fs.readFileSync(outputPath);
-            fs.unlinkSync(outputPath);
-            resolve(data);
-          } catch (err) {
-            reject(err);
-          }
-        },
-      );
+        try {
+          const data = fs.readFileSync(outputPath);
+          fs.unlinkSync(outputPath);
+          resolve(data);
+        } catch (err) {
+          reject(err);
+        }
+      });
     });
   }
 
@@ -217,7 +221,10 @@ export class MediaGenerator {
     timestamp: number,
   ): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      const outputPath = path.join(this.tempDir, `notify_icon_${Date.now()}.png`);
+      const outputPath = path.join(
+        this.tempDir,
+        `notify_icon_${Date.now()}.png`,
+      );
 
       execFile(
         "ffmpeg",
@@ -238,7 +245,11 @@ export class MediaGenerator {
         { timeout: 30000 },
         (error) => {
           if (error) {
-            reject(new Error(`FFmpeg notification icon generation failed: ${error.message}`));
+            reject(
+              new Error(
+                `FFmpeg notification icon generation failed: ${error.message}`,
+              ),
+            );
             return;
           }
 
@@ -276,7 +287,9 @@ export class MediaGenerator {
     const vfParts: string[] = [];
     vfParts.push(`fps=${clampedFps}`);
     if (maxWidth && maxWidth > 0 && maxHeight && maxHeight > 0) {
-      vfParts.push(`scale=w=${maxWidth}:h=${maxHeight}:force_original_aspect_ratio=decrease`);
+      vfParts.push(
+        `scale=w=${maxWidth}:h=${maxHeight}:force_original_aspect_ratio=decrease`,
+      );
     } else if (maxWidth && maxWidth > 0) {
       vfParts.push(`scale=w=${maxWidth}:h=-2`);
     } else if (maxHeight && maxHeight > 0) {
@@ -284,7 +297,10 @@ export class MediaGenerator {
     }
 
     return new Promise((resolve, reject) => {
-      const outputPath = path.join(this.tempDir, `animation_${Date.now()}.avif`);
+      const outputPath = path.join(
+        this.tempDir,
+        `animation_${Date.now()}.avif`,
+      );
 
       execFile(
         "ffmpeg",
@@ -311,7 +327,9 @@ export class MediaGenerator {
         { timeout: 60000 },
         (error) => {
           if (error) {
-            reject(new Error(`FFmpeg animation generation failed: ${error.message}`));
+            reject(
+              new Error(`FFmpeg animation generation failed: ${error.message}`),
+            );
             return;
           }
 

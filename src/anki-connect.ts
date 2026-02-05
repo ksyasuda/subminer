@@ -136,18 +136,13 @@ export class AnkiConnectClient {
         lastError = error as Error;
         this.consecutiveFailures++;
 
-        if (
-          !this.isRetryableError(error) ||
-          attempt === maxRetries
-        ) {
+        if (!this.isRetryableError(error) || attempt === maxRetries) {
           if (this.consecutiveFailures < this.maxConsecutiveFailures) {
             console.error(
               `AnkiConnect error (attempt ${this.consecutiveFailures}/${this.maxConsecutiveFailures}):`,
               lastError.message,
             );
-          } else if (
-            this.consecutiveFailures === this.maxConsecutiveFailures
-          ) {
+          } else if (this.consecutiveFailures === this.maxConsecutiveFailures) {
             console.error(
               "AnkiConnect: Too many consecutive failures, suppressing further error logs",
             );
@@ -160,7 +155,10 @@ export class AnkiConnectClient {
     throw lastError || new Error("Unknown error");
   }
 
-  async findNotes(query: string, options?: { maxRetries?: number }): Promise<number[]> {
+  async findNotes(
+    query: string,
+    options?: { maxRetries?: number },
+  ): Promise<number[]> {
     const result = await this.invoke("findNotes", { query }, options);
     return (result as number[]) || [];
   }
@@ -182,10 +180,7 @@ export class AnkiConnectClient {
     });
   }
 
-  async storeMediaFile(
-    filename: string,
-    data: Buffer,
-  ): Promise<void> {
+  async storeMediaFile(filename: string, data: Buffer): Promise<void> {
     const base64Data = data.toString("base64");
     const sizeKB = Math.round(base64Data.length / 1024);
     console.log(`Uploading media file: ${filename} (${sizeKB}KB)`);

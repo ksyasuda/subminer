@@ -39,7 +39,8 @@ export class AnkiIntegration {
   private nextPollTime = 0;
   private mpvClient: any;
   private osdCallback: ((text: string) => void) | null = null;
-  private notificationCallback: ((title: string, options: any) => void) | null = null;
+  private notificationCallback: ((title: string, options: any) => void) | null =
+    null;
   private updateInProgress = false;
 
   constructor(
@@ -88,7 +89,10 @@ export class AnkiIntegration {
       this.stop();
     }
 
-    console.log("Starting AnkiConnect integration with polling rate:", this.config.pollingRate);
+    console.log(
+      "Starting AnkiConnect integration with polling rate:",
+      this.config.pollingRate,
+    );
     this.poll();
   }
 
@@ -115,13 +119,17 @@ export class AnkiIntegration {
       const query = this.config.deck
         ? `"deck:${this.config.deck}" added:1`
         : "added:1";
-      const noteIds = (await this.client.findNotes(query, { maxRetries: 0 })) as number[];
+      const noteIds = (await this.client.findNotes(query, {
+        maxRetries: 0,
+      })) as number[];
       const currentNoteIds = new Set(noteIds);
 
       if (!this.initialized) {
         this.previousNoteIds = currentNoteIds;
         this.initialized = true;
-        console.log(`AnkiConnect initialized with ${currentNoteIds.size} existing cards`);
+        console.log(
+          `AnkiConnect initialized with ${currentNoteIds.size} existing cards`,
+        );
         this.backoffMs = 200;
         return;
       }
@@ -201,9 +209,12 @@ export class AnkiIntegration {
 
           if (audioBuffer) {
             await this.client.storeMediaFile(audioFilename, audioBuffer);
-            const existingAudio = noteInfo.fields[this.config.audioField!]?.value || "";
+            const existingAudio =
+              noteInfo.fields[this.config.audioField!]?.value || "";
             updatedFields[this.config.audioField!] = this.mergeFieldValue(
-              existingAudio, `[sound:${audioFilename}]`, this.config.overwriteAudio !== false,
+              existingAudio,
+              `[sound:${audioFilename}]`,
+              this.config.overwriteAudio !== false,
             );
 
             if (this.config.miscInfoField) {
@@ -217,7 +228,9 @@ export class AnkiIntegration {
           }
         } catch (error) {
           console.error("Failed to generate audio:", (error as Error).message);
-          this.showOsdNotification(`Audio generation failed: ${(error as Error).message}`);
+          this.showOsdNotification(
+            `Audio generation failed: ${(error as Error).message}`,
+          );
         }
       }
 
@@ -229,12 +242,18 @@ export class AnkiIntegration {
 
           if (imageBuffer) {
             await this.client.storeMediaFile(imageFilename, imageBuffer);
-            const existingImage = noteInfo.fields[this.config.imageField!]?.value || "";
+            const existingImage =
+              noteInfo.fields[this.config.imageField!]?.value || "";
             updatedFields[this.config.imageField!] = this.mergeFieldValue(
-              existingImage, `<img src="${imageFilename}">`, this.config.overwriteImage !== false,
+              existingImage,
+              `<img src="${imageFilename}">`,
+              this.config.overwriteImage !== false,
             );
 
-            if (this.config.miscInfoField && !updatedFields[this.config.miscInfoField]) {
+            if (
+              this.config.miscInfoField &&
+              !updatedFields[this.config.miscInfoField]
+            ) {
               const miscInfo = this.formatMiscInfoPattern(imageFilename);
               if (miscInfo) {
                 updatedFields[this.config.miscInfoField] = miscInfo;
@@ -245,7 +264,9 @@ export class AnkiIntegration {
           }
         } catch (error) {
           console.error("Failed to generate image:", (error as Error).message);
-          this.showOsdNotification(`Image generation failed: ${(error as Error).message}`);
+          this.showOsdNotification(
+            `Image generation failed: ${(error as Error).message}`,
+          );
         }
       }
 
@@ -283,8 +304,9 @@ export class AnkiIntegration {
       return mpvSentence;
     }
 
-    const sentenceFieldName = this.config.sentenceField?.toLowerCase() || 'sentence';
-    const existingSentence = noteFields[sentenceFieldName] || '';
+    const sentenceFieldName =
+      this.config.sentenceField?.toLowerCase() || "sentence";
+    const existingSentence = noteFields[sentenceFieldName] || "";
 
     const highlightMatch = existingSentence.match(/<b>(.*?)<\/b>/);
     if (!highlightMatch || !highlightMatch[1]) {
@@ -359,16 +381,12 @@ export class AnkiIntegration {
         },
       );
     } else {
-      return this.mediaGenerator.generateScreenshot(
-        videoPath,
-        timestamp,
-        {
-          format: this.config.imageFormat as "jpg" | "png" | "webp",
-          quality: this.config.imageQuality,
-          maxWidth: this.config.imageMaxWidth,
-          maxHeight: this.config.imageMaxHeight,
-        },
-      );
+      return this.mediaGenerator.generateScreenshot(videoPath, timestamp, {
+        format: this.config.imageFormat as "jpg" | "png" | "webp",
+        quality: this.config.imageQuality,
+        maxWidth: this.config.imageMaxWidth,
+        maxHeight: this.config.imageMaxHeight,
+      });
     }
   }
 
@@ -403,7 +421,8 @@ export class AnkiIntegration {
 
   private generateImageFilename(): string {
     const timestamp = Date.now();
-    const ext = this.config.imageType === "avif" ? "avif" : this.config.imageFormat;
+    const ext =
+      this.config.imageType === "avif" ? "avif" : this.config.imageFormat;
     return `image_${timestamp}.${ext}`;
   }
 
@@ -429,7 +448,11 @@ export class AnkiIntegration {
     }
   }
 
-  private async showNotification(noteId: number, label: string | number, errorSuffix?: string): Promise<void> {
+  private async showNotification(
+    noteId: number,
+    label: string | number,
+    errorSuffix?: string,
+  ): Promise<void> {
     const message = errorSuffix
       ? `Updated card: ${label} (${errorSuffix})`
       : `Updated card: ${label}`;
@@ -451,24 +474,32 @@ export class AnkiIntegration {
             timestamp,
           );
           if (iconBuffer && iconBuffer.length > 0) {
-            notificationIconPath = this.mediaGenerator.writeNotificationIconToFile(
-              iconBuffer,
-              noteId,
-            );
+            notificationIconPath =
+              this.mediaGenerator.writeNotificationIconToFile(
+                iconBuffer,
+                noteId,
+              );
           }
         } catch (err) {
-          console.warn('Failed to generate notification icon:', (err as Error).message);
+          console.warn(
+            "Failed to generate notification icon:",
+            (err as Error).message,
+          );
         }
       }
 
-      this.notificationCallback('Anki Card Updated', {
+      this.notificationCallback("Anki Card Updated", {
         body: message,
         icon: notificationIconPath,
       });
     }
   }
 
-  private mergeFieldValue(existing: string, newValue: string, overwrite: boolean): string {
+  private mergeFieldValue(
+    existing: string,
+    newValue: string,
+    overwrite: boolean,
+  ): string {
     if (overwrite || !existing.trim()) {
       return newValue;
     }
@@ -537,152 +568,168 @@ export class AnkiIntegration {
       this.updateInProgress = true;
 
       try {
-      // Get last added note
-      const query = this.config.deck
-        ? `"deck:${this.config.deck}" added:1`
-        : "added:1";
-      const noteIds = (await this.client.findNotes(query)) as number[];
-      if (!noteIds || noteIds.length === 0) {
-        this.showOsdNotification("No recently added cards found");
-        return;
-      }
-
-      // Get max note ID (most recent)
-      const noteId = Math.max(...noteIds);
-
-      // Get note info for expression
-      const notesInfoResult = await this.client.notesInfo([noteId]);
-      const notesInfo = notesInfoResult as unknown as NoteInfo[];
-      if (!notesInfo || notesInfo.length === 0) {
-        this.showOsdNotification("Card not found");
-        return;
-      }
-
-      const noteInfo = notesInfo[0];
-      const fields = this.extractFields(noteInfo.fields);
-      const expressionText = fields.expression || fields.word || "";
-
-      // Build sentence from blocks (join with spaces between blocks)
-      const sentence = blocks.join(" ");
-      const updatedFields: Record<string, string> = {};
-      let updatePerformed = false;
-      const errors: string[] = [];
-
-      // Add sentence field
-      if (this.config.sentenceField) {
-        const processedSentence = this.processSentence(sentence, fields);
-        updatedFields[this.config.sentenceField] = processedSentence;
-        updatePerformed = true;
-      }
-
-      console.log(`Clipboard update: timing range ${rangeStart.toFixed(2)}s - ${rangeEnd.toFixed(2)}s`);
-
-      // Generate and upload audio
-      if (this.config.generateAudio) {
-        try {
-          const audioFilename = this.generateAudioFilename();
-          const audioBuffer = await this.mediaGenerator.generateAudio(
-            this.mpvClient.currentVideoPath,
-            rangeStart,
-            rangeEnd,
-            this.config.audioPadding,
-          );
-
-          if (audioBuffer) {
-            await this.client.storeMediaFile(audioFilename, audioBuffer);
-            const existingAudio = noteInfo.fields[this.config.audioField!]?.value || "";
-            updatedFields[this.config.audioField!] = this.mergeFieldValue(
-              existingAudio, `[sound:${audioFilename}]`, this.config.overwriteAudio !== false,
-            );
-
-            if (this.config.miscInfoField) {
-              const miscInfo = this.formatMiscInfoPattern(audioFilename);
-              if (miscInfo) {
-                updatedFields[this.config.miscInfoField] = miscInfo;
-              }
-            }
-
-            updatePerformed = true;
-          }
-        } catch (error) {
-          console.error("Failed to generate audio:", (error as Error).message);
-          errors.push("audio");
+        // Get last added note
+        const query = this.config.deck
+          ? `"deck:${this.config.deck}" added:1`
+          : "added:1";
+        const noteIds = (await this.client.findNotes(query)) as number[];
+        if (!noteIds || noteIds.length === 0) {
+          this.showOsdNotification("No recently added cards found");
+          return;
         }
-      }
 
-      // Generate and upload image
-      if (this.config.generateImage) {
-        try {
-          const imageFilename = this.generateImageFilename();
-          let imageBuffer: Buffer | null = null;
+        // Get max note ID (most recent)
+        const noteId = Math.max(...noteIds);
 
-          if (this.config.imageType === "avif") {
-            imageBuffer = await this.mediaGenerator.generateAnimatedImage(
+        // Get note info for expression
+        const notesInfoResult = await this.client.notesInfo([noteId]);
+        const notesInfo = notesInfoResult as unknown as NoteInfo[];
+        if (!notesInfo || notesInfo.length === 0) {
+          this.showOsdNotification("Card not found");
+          return;
+        }
+
+        const noteInfo = notesInfo[0];
+        const fields = this.extractFields(noteInfo.fields);
+        const expressionText = fields.expression || fields.word || "";
+
+        // Build sentence from blocks (join with spaces between blocks)
+        const sentence = blocks.join(" ");
+        const updatedFields: Record<string, string> = {};
+        let updatePerformed = false;
+        const errors: string[] = [];
+
+        // Add sentence field
+        if (this.config.sentenceField) {
+          const processedSentence = this.processSentence(sentence, fields);
+          updatedFields[this.config.sentenceField] = processedSentence;
+          updatePerformed = true;
+        }
+
+        console.log(
+          `Clipboard update: timing range ${rangeStart.toFixed(2)}s - ${rangeEnd.toFixed(2)}s`,
+        );
+
+        // Generate and upload audio
+        if (this.config.generateAudio) {
+          try {
+            const audioFilename = this.generateAudioFilename();
+            const audioBuffer = await this.mediaGenerator.generateAudio(
               this.mpvClient.currentVideoPath,
               rangeStart,
               rangeEnd,
               this.config.audioPadding,
-              {
-                fps: this.config.animatedFps,
-                maxWidth: this.config.animatedMaxWidth,
-                maxHeight: this.config.animatedMaxHeight,
-                crf: this.config.animatedCrf,
-              },
-            );
-          } else {
-            const timestamp = this.mpvClient.currentTimePos || 0;
-            imageBuffer = await this.mediaGenerator.generateScreenshot(
-              this.mpvClient.currentVideoPath,
-              timestamp,
-              {
-                format: this.config.imageFormat as "jpg" | "png" | "webp",
-                quality: this.config.imageQuality,
-                maxWidth: this.config.imageMaxWidth,
-                maxHeight: this.config.imageMaxHeight,
-              },
-            );
-          }
-
-          if (imageBuffer) {
-            await this.client.storeMediaFile(imageFilename, imageBuffer);
-            const existingImage = noteInfo.fields[this.config.imageField!]?.value || "";
-            updatedFields[this.config.imageField!] = this.mergeFieldValue(
-              existingImage, `<img src="${imageFilename}">`, this.config.overwriteImage !== false,
             );
 
-            if (
-              this.config.miscInfoField &&
-              !updatedFields[this.config.miscInfoField]
-            ) {
-              const miscInfo = this.formatMiscInfoPattern(imageFilename);
-              if (miscInfo) {
-                updatedFields[this.config.miscInfoField] = miscInfo;
+            if (audioBuffer) {
+              await this.client.storeMediaFile(audioFilename, audioBuffer);
+              const existingAudio =
+                noteInfo.fields[this.config.audioField!]?.value || "";
+              updatedFields[this.config.audioField!] = this.mergeFieldValue(
+                existingAudio,
+                `[sound:${audioFilename}]`,
+                this.config.overwriteAudio !== false,
+              );
+
+              if (this.config.miscInfoField) {
+                const miscInfo = this.formatMiscInfoPattern(audioFilename);
+                if (miscInfo) {
+                  updatedFields[this.config.miscInfoField] = miscInfo;
+                }
               }
+
+              updatePerformed = true;
+            }
+          } catch (error) {
+            console.error(
+              "Failed to generate audio:",
+              (error as Error).message,
+            );
+            errors.push("audio");
+          }
+        }
+
+        // Generate and upload image
+        if (this.config.generateImage) {
+          try {
+            const imageFilename = this.generateImageFilename();
+            let imageBuffer: Buffer | null = null;
+
+            if (this.config.imageType === "avif") {
+              imageBuffer = await this.mediaGenerator.generateAnimatedImage(
+                this.mpvClient.currentVideoPath,
+                rangeStart,
+                rangeEnd,
+                this.config.audioPadding,
+                {
+                  fps: this.config.animatedFps,
+                  maxWidth: this.config.animatedMaxWidth,
+                  maxHeight: this.config.animatedMaxHeight,
+                  crf: this.config.animatedCrf,
+                },
+              );
+            } else {
+              const timestamp = this.mpvClient.currentTimePos || 0;
+              imageBuffer = await this.mediaGenerator.generateScreenshot(
+                this.mpvClient.currentVideoPath,
+                timestamp,
+                {
+                  format: this.config.imageFormat as "jpg" | "png" | "webp",
+                  quality: this.config.imageQuality,
+                  maxWidth: this.config.imageMaxWidth,
+                  maxHeight: this.config.imageMaxHeight,
+                },
+              );
             }
 
-            updatePerformed = true;
-          }
-        } catch (error) {
-          console.error("Failed to generate image:", (error as Error).message);
-          errors.push("image");
-        }
-      }
+            if (imageBuffer) {
+              await this.client.storeMediaFile(imageFilename, imageBuffer);
+              const existingImage =
+                noteInfo.fields[this.config.imageField!]?.value || "";
+              updatedFields[this.config.imageField!] = this.mergeFieldValue(
+                existingImage,
+                `<img src="${imageFilename}">`,
+                this.config.overwriteImage !== false,
+              );
 
-      if (updatePerformed) {
-        await this.client.updateNoteFields(noteId, updatedFields);
-        const label = expressionText || noteId;
-        console.log("Updated card from clipboard:", label);
-        const errorSuffix = errors.length > 0 ? `${errors.join(", ")} failed` : undefined;
-        await this.showNotification(noteId, label, errorSuffix);
-      }
+              if (
+                this.config.miscInfoField &&
+                !updatedFields[this.config.miscInfoField]
+              ) {
+                const miscInfo = this.formatMiscInfoPattern(imageFilename);
+                if (miscInfo) {
+                  updatedFields[this.config.miscInfoField] = miscInfo;
+                }
+              }
+
+              updatePerformed = true;
+            }
+          } catch (error) {
+            console.error(
+              "Failed to generate image:",
+              (error as Error).message,
+            );
+            errors.push("image");
+          }
+        }
+
+        if (updatePerformed) {
+          await this.client.updateNoteFields(noteId, updatedFields);
+          const label = expressionText || noteId;
+          console.log("Updated card from clipboard:", label);
+          const errorSuffix =
+            errors.length > 0 ? `${errors.join(", ")} failed` : undefined;
+          await this.showNotification(noteId, label, errorSuffix);
+        }
       } finally {
         this.updateInProgress = false;
       }
     } catch (error) {
-      console.error("Error updating card from clipboard:", (error as Error).message);
-      this.showOsdNotification(
-        `Update failed: ${(error as Error).message}`,
+      console.error(
+        "Error updating card from clipboard:",
+        (error as Error).message,
       );
+      this.showOsdNotification(`Update failed: ${(error as Error).message}`);
     }
   }
 
@@ -717,7 +764,8 @@ export class AnkiIntegration {
     const errors: string[] = [];
 
     const sentenceField = this.config.sentenceCardSentenceField || "Sentence";
-    const audioFieldName = this.config.sentenceCardAudioField || "SentenceAudio";
+    const audioFieldName =
+      this.config.sentenceCardAudioField || "SentenceAudio";
 
     fields[sentenceField] = sentence;
 
@@ -733,12 +781,21 @@ export class AnkiIntegration {
     const deck = this.config.deck || "Default";
     let noteId: number;
     try {
-      noteId = await this.client.addNote(deck, this.config.sentenceCardModel, fields);
+      noteId = await this.client.addNote(
+        deck,
+        this.config.sentenceCardModel,
+        fields,
+      );
       console.log("Created sentence card:", noteId);
       this.previousNoteIds.add(noteId);
     } catch (error) {
-      console.error("Failed to create sentence card:", (error as Error).message);
-      this.showOsdNotification(`Sentence card failed: ${(error as Error).message}`);
+      console.error(
+        "Failed to create sentence card:",
+        (error as Error).message,
+      );
+      this.showOsdNotification(
+        `Sentence card failed: ${(error as Error).message}`,
+      );
       return;
     }
 
@@ -758,7 +815,10 @@ export class AnkiIntegration {
         mediaFields[audioFieldName] = `[sound:${audioFilename}]`;
       }
     } catch (error) {
-      console.error("Failed to generate sentence audio:", (error as Error).message);
+      console.error(
+        "Failed to generate sentence audio:",
+        (error as Error).message,
+      );
       errors.push("audio");
     }
 
@@ -798,7 +858,10 @@ export class AnkiIntegration {
         mediaFields[this.config.imageField] = `<img src="${imageFilename}">`;
       }
     } catch (error) {
-      console.error("Failed to generate sentence image:", (error as Error).message);
+      console.error(
+        "Failed to generate sentence image:",
+        (error as Error).message,
+      );
       errors.push("image");
     }
 
@@ -806,13 +869,18 @@ export class AnkiIntegration {
       try {
         await this.client.updateNoteFields(noteId, mediaFields);
       } catch (error) {
-        console.error("Failed to update sentence card media:", (error as Error).message);
+        console.error(
+          "Failed to update sentence card media:",
+          (error as Error).message,
+        );
         errors.push("media update");
       }
     }
 
-    const label = sentence.length > 30 ? sentence.substring(0, 30) + "..." : sentence;
-    const errorSuffix = errors.length > 0 ? `${errors.join(", ")} failed` : undefined;
+    const label =
+      sentence.length > 30 ? sentence.substring(0, 30) + "..." : sentence;
+    const errorSuffix =
+      errors.length > 0 ? `${errors.join(", ")} failed` : undefined;
     await this.showNotification(noteId, label, errorSuffix);
   }
 

@@ -37,21 +37,34 @@ import type {
 
 const electronAPI: ElectronAPI = {
   onSubtitle: (callback: (data: SubtitleData) => void) => {
-    ipcRenderer.on("subtitle:set", (_event: IpcRendererEvent, data: SubtitleData) => callback(data));
+    ipcRenderer.on(
+      "subtitle:set",
+      (_event: IpcRendererEvent, data: SubtitleData) => callback(data),
+    );
   },
 
   onVisibility: (callback: (visible: boolean) => void) => {
-    ipcRenderer.on("mpv:subVisibility", (_event: IpcRendererEvent, visible: boolean) => callback(visible));
+    ipcRenderer.on(
+      "mpv:subVisibility",
+      (_event: IpcRendererEvent, visible: boolean) => callback(visible),
+    );
   },
 
-  onSubtitlePosition: (callback: (position: SubtitlePosition | null) => void) => {
-    ipcRenderer.on("subtitle-position:set", (_event: IpcRendererEvent, position: SubtitlePosition | null) => {
-      callback(position);
-    });
+  onSubtitlePosition: (
+    callback: (position: SubtitlePosition | null) => void,
+  ) => {
+    ipcRenderer.on(
+      "subtitle-position:set",
+      (_event: IpcRendererEvent, position: SubtitlePosition | null) => {
+        callback(position);
+      },
+    );
   },
 
-  getOverlayVisibility: (): Promise<boolean> => ipcRenderer.invoke("get-overlay-visibility"),
-  getCurrentSubtitle: (): Promise<SubtitleData> => ipcRenderer.invoke("get-current-subtitle"),
+  getOverlayVisibility: (): Promise<boolean> =>
+    ipcRenderer.invoke("get-overlay-visibility"),
+  getCurrentSubtitle: (): Promise<SubtitleData> =>
+    ipcRenderer.invoke("get-current-subtitle"),
 
   setIgnoreMouseEvents: (ignore: boolean, options?: { forward?: boolean }) => {
     ipcRenderer.send("set-ignore-mouse-events", ignore, options);
@@ -61,12 +74,14 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.send("open-yomitan-settings");
   },
 
-  getSubtitlePosition: (): Promise<SubtitlePosition | null> => ipcRenderer.invoke("get-subtitle-position"),
+  getSubtitlePosition: (): Promise<SubtitlePosition | null> =>
+    ipcRenderer.invoke("get-subtitle-position"),
   saveSubtitlePosition: (position: SubtitlePosition) => {
     ipcRenderer.send("save-subtitle-position", position);
   },
 
-  getMecabStatus: (): Promise<MecabStatus> => ipcRenderer.invoke("get-mecab-status"),
+  getMecabStatus: (): Promise<MecabStatus> =>
+    ipcRenderer.invoke("get-mecab-status"),
   setMecabEnabled: (enabled: boolean) => {
     ipcRenderer.send("set-mecab-enabled", enabled);
   },
@@ -75,7 +90,8 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.send("mpv-command", command);
   },
 
-  getKeybindings: (): Promise<Keybinding[]> => ipcRenderer.invoke("get-keybindings"),
+  getKeybindings: (): Promise<Keybinding[]> =>
+    ipcRenderer.invoke("get-keybindings"),
 
   getJimakuMediaInfo: (): Promise<JimakuMediaInfo> => ipcRenderer.invoke("jimaku:get-media-info"),
   jimakuSearchEntries: (query: JimakuSearchQuery): Promise<JimakuApiResponse<JimakuEntry[]>> =>
@@ -97,7 +113,8 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.send("toggle-overlay");
   },
 
-  getAnkiConnectStatus: (): Promise<boolean> => ipcRenderer.invoke("get-anki-connect-status"),
+  getAnkiConnectStatus: (): Promise<boolean> =>
+    ipcRenderer.invoke("get-anki-connect-status"),
   setAnkiConnectEnabled: (enabled: boolean) => {
     ipcRenderer.send("set-anki-connect-enabled", enabled);
   },
@@ -106,16 +123,25 @@ const electronAPI: ElectronAPI = {
   },
 
   onSecondarySub: (callback: (text: string) => void) => {
-    ipcRenderer.on("secondary-subtitle:set", (_event: IpcRendererEvent, text: string) => callback(text));
+    ipcRenderer.on(
+      "secondary-subtitle:set",
+      (_event: IpcRendererEvent, text: string) => callback(text),
+    );
   },
 
   onSecondarySubMode: (callback: (mode: SecondarySubMode) => void) => {
-    ipcRenderer.on("secondary-subtitle:mode", (_event: IpcRendererEvent, mode: SecondarySubMode) => callback(mode));
+    ipcRenderer.on(
+      "secondary-subtitle:mode",
+      (_event: IpcRendererEvent, mode: SecondarySubMode) => callback(mode),
+    );
   },
 
-  getSecondarySubMode: (): Promise<SecondarySubMode> => ipcRenderer.invoke("get-secondary-sub-mode"),
-  getCurrentSecondarySub: (): Promise<string> => ipcRenderer.invoke("get-current-secondary-sub"),
-  getSubtitleStyle: (): Promise<SubtitleStyleConfig | null> => ipcRenderer.invoke("get-subtitle-style"),
+  getSecondarySubMode: (): Promise<SecondarySubMode> =>
+    ipcRenderer.invoke("get-secondary-sub-mode"),
+  getCurrentSecondarySub: (): Promise<string> =>
+    ipcRenderer.invoke("get-current-secondary-sub"),
+  getSubtitleStyle: (): Promise<SubtitleStyleConfig | null> =>
+    ipcRenderer.invoke("get-subtitle-style"),
 };
 
 contextBridge.exposeInMainWorld("electronAPI", electronAPI);
