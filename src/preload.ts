@@ -20,10 +20,19 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
 import type {
   SubtitleData,
   SubtitlePosition,
-  SubtitleStyle,
   MecabStatus,
   Keybinding,
   ElectronAPI,
+  SecondarySubMode,
+  SubtitleStyleConfig,
+  JimakuMediaInfo,
+  JimakuSearchQuery,
+  JimakuFilesQuery,
+  JimakuDownloadQuery,
+  JimakuEntry,
+  JimakuFileEntry,
+  JimakuApiResponse,
+  JimakuDownloadResult,
 } from "./types";
 
 const electronAPI: ElectronAPI = {
@@ -56,18 +65,25 @@ const electronAPI: ElectronAPI = {
   saveSubtitlePosition: (position: SubtitlePosition) => {
     ipcRenderer.send("save-subtitle-position", position);
   },
-  getSubtitleStyle: (): Promise<SubtitleStyle> => ipcRenderer.invoke("get-subtitle-style"),
 
   getMecabStatus: (): Promise<MecabStatus> => ipcRenderer.invoke("get-mecab-status"),
   setMecabEnabled: (enabled: boolean) => {
     ipcRenderer.send("set-mecab-enabled", enabled);
   },
 
-  sendMpvCommand: (command: string[]) => {
+  sendMpvCommand: (command: (string | number)[]) => {
     ipcRenderer.send("mpv-command", command);
   },
 
   getKeybindings: (): Promise<Keybinding[]> => ipcRenderer.invoke("get-keybindings"),
+
+  getJimakuMediaInfo: (): Promise<JimakuMediaInfo> => ipcRenderer.invoke("jimaku:get-media-info"),
+  jimakuSearchEntries: (query: JimakuSearchQuery): Promise<JimakuApiResponse<JimakuEntry[]>> =>
+    ipcRenderer.invoke("jimaku:search-entries", query),
+  jimakuListFiles: (query: JimakuFilesQuery): Promise<JimakuApiResponse<JimakuFileEntry[]>> =>
+    ipcRenderer.invoke("jimaku:list-files", query),
+  jimakuDownloadFile: (query: JimakuDownloadQuery): Promise<JimakuDownloadResult> =>
+    ipcRenderer.invoke("jimaku:download-file", query),
 
   quitApp: () => {
     ipcRenderer.send("quit-app");
@@ -80,6 +96,26 @@ const electronAPI: ElectronAPI = {
   toggleOverlay: () => {
     ipcRenderer.send("toggle-overlay");
   },
+
+  getAnkiConnectStatus: (): Promise<boolean> => ipcRenderer.invoke("get-anki-connect-status"),
+  setAnkiConnectEnabled: (enabled: boolean) => {
+    ipcRenderer.send("set-anki-connect-enabled", enabled);
+  },
+  clearAnkiConnectHistory: () => {
+    ipcRenderer.send("clear-anki-connect-history");
+  },
+
+  onSecondarySub: (callback: (text: string) => void) => {
+    ipcRenderer.on("secondary-subtitle:set", (_event: IpcRendererEvent, text: string) => callback(text));
+  },
+
+  onSecondarySubMode: (callback: (mode: SecondarySubMode) => void) => {
+    ipcRenderer.on("secondary-subtitle:mode", (_event: IpcRendererEvent, mode: SecondarySubMode) => callback(mode));
+  },
+
+  getSecondarySubMode: (): Promise<SecondarySubMode> => ipcRenderer.invoke("get-secondary-sub-mode"),
+  getCurrentSecondarySub: (): Promise<string> => ipcRenderer.invoke("get-current-secondary-sub"),
+  getSubtitleStyle: (): Promise<SubtitleStyleConfig | null> => ipcRenderer.invoke("get-subtitle-style"),
 };
 
 contextBridge.exposeInMainWorld("electronAPI", electronAPI);

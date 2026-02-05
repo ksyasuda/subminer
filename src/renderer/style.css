@@ -22,13 +22,12 @@
 	box-sizing: border-box;
 }
 
-html,
-body {
-	width: 100%;
-	height: 100%;
-	overflow: hidden;
-	background: transparent;
-	font-family: 'Noto Sans CJK JP', 'Yu Gothic', 'Hiragino Sans', sans-serif;
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: 'Noto Sans CJK JP Regular', 'Noto Sans CJK JP', 'Arial Unicode MS', Arial, sans-serif;
 }
 
 #overlay {
@@ -45,24 +44,204 @@ body {
 	pointer-events: auto;
 }
 
+.modal {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  pointer-events: auto;
+  z-index: 1000;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-content {
+  width: min(720px, 92%);
+  max-height: 80%;
+  background: rgba(20, 20, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 16px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.jimaku-form {
+  display: grid;
+  grid-template-columns: 1fr 120px 120px auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.jimaku-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.jimaku-field input {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #fff;
+  padding: 6px 8px;
+}
+
+.jimaku-button {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  cursor: pointer;
+}
+
+.jimaku-button:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.jimaku-status {
+  min-height: 20px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.jimaku-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow: hidden;
+}
+
+.jimaku-section.hidden {
+  display: none;
+}
+
+.jimaku-section-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.jimaku-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  max-height: 180px;
+}
+
+.jimaku-list li {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jimaku-list li:last-child {
+  border-bottom: none;
+}
+
+.jimaku-list li.active {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.jimaku-list .jimaku-subtext {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.jimaku-link {
+  align-self: flex-start;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.8);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.jimaku-link.hidden {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .jimaku-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .jimaku-button {
+    grid-column: span 2;
+  }
+}
+
 #subtitleContainer {
-	max-width: 80%;
-	margin-bottom: 60px;
-	padding: 12px 20px;
-	background: rgba(0, 0, 0, 0.75);
-	border-radius: 8px;
-	pointer-events: auto;
+  max-width: 80%;
+  margin-bottom: 60px;
+  padding: 12px 20px;
+  background: rgba(54, 58, 79, 0.5);
+  border-radius: 8px;
+  pointer-events: auto;
 }
 
 #subtitleRoot {
-	text-align: center;
-	font-size: var(--subtitle-font-size, 24px);
-	line-height: 1.5;
-	color: #ffffff;
-	text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), -1px -1px 2px rgba(0, 0, 0, 0.5);
-	/* Enable text selection for Yomitan */
-	user-select: text;
-	cursor: text;
+  text-align: center;
+  font-size: 35px;
+  line-height: 1.5;
+  color: #cad3f5;
+  text-shadow:
+    2px 2px 4px rgba(0, 0, 0, 0.8),
+    -1px -1px 2px rgba(0, 0, 0, 0.5);
+  /* Enable text selection for Yomitan */
+  user-select: text;
+  cursor: text;
 }
 
 #subtitleRoot:empty {
@@ -104,7 +283,69 @@ body {
 	background: transparent;
 }
 
-iframe[id^='yomitan-popup'] {
-	pointer-events: auto !important;
-	z-index: 2147483647 !important;
+#secondarySubContainer {
+  position: absolute;
+  top: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 80%;
+  padding: 10px 18px;
+  background: transparent;
+  border-radius: 8px;
+  pointer-events: auto;
+}
+
+#secondarySubRoot {
+  text-align: center;
+  font-size: 24px;
+  line-height: 1.5;
+  color: #cad3f5;
+  text-shadow:
+    2px 2px 4px rgba(0, 0, 0, 0.8),
+    -1px -1px 2px rgba(0, 0, 0, 0.5);
+  user-select: text;
+  cursor: text;
+}
+
+#secondarySubRoot:empty {
+  display: none;
+}
+
+#secondarySubContainer:has(#secondarySubRoot:empty) {
+  display: none;
+}
+
+.secondary-sub-hidden {
+  display: none !important;
+}
+
+#secondarySubContainer.secondary-sub-hover {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: auto;
+  top: 0;
+  left: 0;
+  right: 0;
+  transform: none;
+  max-width: 100%;
+  background: transparent;
+  padding: 40px 0 0 0;
+  border-radius: 0;
+  display: flex;
+  justify-content: center;
+}
+
+#secondarySubContainer.secondary-sub-hover #secondarySubRoot {
+  background: transparent;
+  border-radius: 8px;
+  padding: 10px 18px;
+}
+
+#secondarySubContainer.secondary-sub-hover:hover {
+  opacity: 1;
+}
+
+iframe[id^="yomitan-popup"] {
+  pointer-events: auto !important;
+  z-index: 2147483647 !important;
 }
