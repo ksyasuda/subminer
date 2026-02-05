@@ -108,23 +108,43 @@ type JimakuDownloadResult =
   | { ok: true; path: string }
   | { ok: false; error: JimakuApiError };
 
-const subtitleRoot = document.getElementById('subtitleRoot')!;
-const subtitleContainer = document.getElementById('subtitleContainer')!;
-const overlay = document.getElementById('overlay')!;
-const secondarySubContainer = document.getElementById('secondarySubContainer')!;
-const secondarySubRoot = document.getElementById('secondarySubRoot')!;
-const jimakuModal = document.getElementById('jimakuModal') as HTMLDivElement;
-const jimakuTitleInput = document.getElementById('jimakuTitle') as HTMLInputElement;
-const jimakuSeasonInput = document.getElementById('jimakuSeason') as HTMLInputElement;
-const jimakuEpisodeInput = document.getElementById('jimakuEpisode') as HTMLInputElement;
-const jimakuSearchButton = document.getElementById('jimakuSearch') as HTMLButtonElement;
-const jimakuCloseButton = document.getElementById('jimakuClose') as HTMLButtonElement;
-const jimakuStatus = document.getElementById('jimakuStatus') as HTMLDivElement;
-const jimakuEntriesSection = document.getElementById('jimakuEntriesSection') as HTMLDivElement;
-const jimakuEntriesList = document.getElementById('jimakuEntries') as HTMLUListElement;
-const jimakuFilesSection = document.getElementById('jimakuFilesSection') as HTMLDivElement;
-const jimakuFilesList = document.getElementById('jimakuFiles') as HTMLUListElement;
-const jimakuBroadenButton = document.getElementById('jimakuBroaden') as HTMLButtonElement;
+const subtitleRoot = document.getElementById("subtitleRoot")!;
+const subtitleContainer = document.getElementById("subtitleContainer")!;
+const overlay = document.getElementById("overlay")!;
+const secondarySubContainer = document.getElementById("secondarySubContainer")!;
+const secondarySubRoot = document.getElementById("secondarySubRoot")!;
+const jimakuModal = document.getElementById("jimakuModal") as HTMLDivElement;
+const jimakuTitleInput = document.getElementById(
+  "jimakuTitle",
+) as HTMLInputElement;
+const jimakuSeasonInput = document.getElementById(
+  "jimakuSeason",
+) as HTMLInputElement;
+const jimakuEpisodeInput = document.getElementById(
+  "jimakuEpisode",
+) as HTMLInputElement;
+const jimakuSearchButton = document.getElementById(
+  "jimakuSearch",
+) as HTMLButtonElement;
+const jimakuCloseButton = document.getElementById(
+  "jimakuClose",
+) as HTMLButtonElement;
+const jimakuStatus = document.getElementById("jimakuStatus") as HTMLDivElement;
+const jimakuEntriesSection = document.getElementById(
+  "jimakuEntriesSection",
+) as HTMLDivElement;
+const jimakuEntriesList = document.getElementById(
+  "jimakuEntries",
+) as HTMLUListElement;
+const jimakuFilesSection = document.getElementById(
+  "jimakuFilesSection",
+) as HTMLDivElement;
+const jimakuFilesList = document.getElementById(
+  "jimakuFiles",
+) as HTMLUListElement;
+const jimakuBroadenButton = document.getElementById(
+  "jimakuBroaden",
+) as HTMLButtonElement;
 
 let isOverSubtitle = false;
 let isDragging = false;
@@ -139,13 +159,11 @@ let currentEpisodeFilter: number | null = null;
 let currentEntryId: number | null = null;
 
 function normalizeSubtitle(text: string): string {
-  if (!text) return '';
+  if (!text) return "";
 
-  let normalized = text
-    .replace(/\\N/g, '\n')
-    .replace(/\\n/g, '\n');
+  let normalized = text.replace(/\\N/g, "\n").replace(/\\n/g, "\n");
 
-  normalized = normalized.replace(/\{[^}]*\}/g, '');
+  normalized = normalized.replace(/\{[^}]*\}/g, "");
 
   return normalized.trim();
 }
@@ -156,12 +174,12 @@ function renderWithTokens(tokens: MergedToken[]): void {
   for (const token of tokens) {
     const surface = token.surface;
 
-    if (surface.includes('\n')) {
-      const parts = surface.split('\n');
+    if (surface.includes("\n")) {
+      const parts = surface.split("\n");
       for (let i = 0; i < parts.length; i++) {
         if (parts[i]) {
-          const span = document.createElement('span');
-          span.className = 'word';
+          const span = document.createElement("span");
+          span.className = "word";
           span.textContent = parts[i];
           if (token.reading) {
             span.dataset.reading = token.reading;
@@ -172,12 +190,12 @@ function renderWithTokens(tokens: MergedToken[]): void {
           fragment.appendChild(span);
         }
         if (i < parts.length - 1) {
-          fragment.appendChild(document.createElement('br'));
+          fragment.appendChild(document.createElement("br"));
         }
       }
     } else {
-      const span = document.createElement('span');
-      span.className = 'word';
+      const span = document.createElement("span");
+      span.className = "word";
       span.textContent = surface;
       if (token.reading) {
         span.dataset.reading = token.reading;
@@ -196,11 +214,11 @@ function renderCharacterLevel(text: string): void {
   const fragment = document.createDocumentFragment();
 
   for (const char of text) {
-    if (char === '\n') {
-      fragment.appendChild(document.createElement('br'));
+    if (char === "\n") {
+      fragment.appendChild(document.createElement("br"));
     } else {
-      const span = document.createElement('span');
-      span.className = 'c';
+      const span = document.createElement("span");
+      span.className = "c";
       span.textContent = char;
       fragment.appendChild(span);
     }
@@ -210,15 +228,15 @@ function renderCharacterLevel(text: string): void {
 }
 
 function renderSubtitle(data: SubtitleData | string): void {
-  subtitleRoot.innerHTML = '';
+  subtitleRoot.innerHTML = "";
 
   let text: string;
   let tokens: MergedToken[] | null;
 
-  if (typeof data === 'string') {
+  if (typeof data === "string") {
     text = data;
     tokens = null;
-  } else if (data && typeof data === 'object') {
+  } else if (data && typeof data === "object") {
     text = data.text;
     tokens = data.tokens;
   } else {
@@ -240,14 +258,14 @@ function renderSubtitle(data: SubtitleData | string): void {
 
 function handleMouseEnter(): void {
   isOverSubtitle = true;
-  overlay.classList.add('interactive');
+  overlay.classList.add("interactive");
 }
 
 function handleMouseLeave(): void {
   isOverSubtitle = false;
   const yomitanPopup = document.querySelector('iframe[id^="yomitan-popup"]');
   if (!yomitanPopup && !jimakuModalOpen) {
-    overlay.classList.remove('interactive');
+    overlay.classList.remove("interactive");
   }
 }
 
@@ -261,38 +279,49 @@ function applyYPercent(yPercent: number): void {
   const clampedPercent = Math.max(2, Math.min(80, yPercent));
   const marginBottom = (clampedPercent / 100) * window.innerHeight;
 
-  subtitleContainer.style.position = '';
-  subtitleContainer.style.left = '';
-  subtitleContainer.style.top = '';
-  subtitleContainer.style.right = '';
-  subtitleContainer.style.transform = '';
+  subtitleContainer.style.position = "";
+  subtitleContainer.style.left = "";
+  subtitleContainer.style.top = "";
+  subtitleContainer.style.right = "";
+  subtitleContainer.style.transform = "";
 
   subtitleContainer.style.marginBottom = `${marginBottom}px`;
 }
 
-function applyStoredSubtitlePosition(position: SubtitlePosition | null, source: string): void {
+function applyStoredSubtitlePosition(
+  position: SubtitlePosition | null,
+  source: string,
+): void {
   if (position && position.yPercent !== undefined) {
     applyYPercent(position.yPercent);
-    console.log('Applied subtitle position from', source, ':', position.yPercent, '%');
+    console.log(
+      "Applied subtitle position from",
+      source,
+      ":",
+      position.yPercent,
+      "%",
+    );
   } else {
     const defaultMarginBottom = 60;
     const defaultYPercent = (defaultMarginBottom / window.innerHeight) * 100;
     applyYPercent(defaultYPercent);
-    console.log('Applied default subtitle position from', source);
+    console.log("Applied default subtitle position from", source);
   }
 }
 
 function applySubtitleFontSize(fontSize: number): void {
   const clampedSize = Math.max(10, Math.min(96, fontSize));
   document.documentElement.style.setProperty(
-    '--subtitle-font-size',
+    "--subtitle-font-size",
     `${clampedSize}px`,
   );
 }
 
 function setJimakuStatus(message: string, isError = false): void {
   jimakuStatus.textContent = message;
-  jimakuStatus.style.color = isError ? 'rgba(255, 120, 120, 0.95)' : 'rgba(255, 255, 255, 0.8)';
+  jimakuStatus.style.color = isError
+    ? "rgba(255, 120, 120, 0.95)"
+    : "rgba(255, 255, 255, 0.8)";
 }
 
 function resetJimakuLists(): void {
@@ -301,47 +330,50 @@ function resetJimakuLists(): void {
   selectedEntryIndex = 0;
   selectedFileIndex = 0;
   currentEntryId = null;
-  jimakuEntriesList.innerHTML = '';
-  jimakuFilesList.innerHTML = '';
-  jimakuEntriesSection.classList.add('hidden');
-  jimakuFilesSection.classList.add('hidden');
-  jimakuBroadenButton.classList.add('hidden');
+  jimakuEntriesList.innerHTML = "";
+  jimakuFilesList.innerHTML = "";
+  jimakuEntriesSection.classList.add("hidden");
+  jimakuFilesSection.classList.add("hidden");
+  jimakuBroadenButton.classList.add("hidden");
 }
 
 function openJimakuModal(): void {
   if (jimakuModalOpen) return;
   jimakuModalOpen = true;
-  overlay.classList.add('interactive');
-  jimakuModal.classList.remove('hidden');
-  jimakuModal.setAttribute('aria-hidden', 'false');
-  setJimakuStatus('Loading media info...');
+  overlay.classList.add("interactive");
+  jimakuModal.classList.remove("hidden");
+  jimakuModal.setAttribute("aria-hidden", "false");
+  setJimakuStatus("Loading media info...");
   resetJimakuLists();
 
-  window.electronAPI.getJimakuMediaInfo().then((info: JimakuMediaInfo) => {
-    jimakuTitleInput.value = info.title || '';
-    jimakuSeasonInput.value = info.season ? String(info.season) : '';
-    jimakuEpisodeInput.value = info.episode ? String(info.episode) : '';
-    currentEpisodeFilter = info.episode ?? null;
+  window.electronAPI
+    .getJimakuMediaInfo()
+    .then((info: JimakuMediaInfo) => {
+      jimakuTitleInput.value = info.title || "";
+      jimakuSeasonInput.value = info.season ? String(info.season) : "";
+      jimakuEpisodeInput.value = info.episode ? String(info.episode) : "";
+      currentEpisodeFilter = info.episode ?? null;
 
-    if (info.confidence === 'high' && info.title && info.episode) {
-      performJimakuSearch();
-    } else if (info.title) {
-      setJimakuStatus('Check title/season/episode and press Search.');
-    } else {
-      setJimakuStatus('Enter title/season/episode and press Search.');
-    }
-  }).catch(() => {
-    setJimakuStatus('Failed to load media info.', true);
-  });
+      if (info.confidence === "high" && info.title && info.episode) {
+        performJimakuSearch();
+      } else if (info.title) {
+        setJimakuStatus("Check title/season/episode and press Search.");
+      } else {
+        setJimakuStatus("Enter title/season/episode and press Search.");
+      }
+    })
+    .catch(() => {
+      setJimakuStatus("Failed to load media info.", true);
+    });
 }
 
 function closeJimakuModal(): void {
   if (!jimakuModalOpen) return;
   jimakuModalOpen = false;
-  jimakuModal.classList.add('hidden');
-  jimakuModal.setAttribute('aria-hidden', 'true');
+  jimakuModal.classList.add("hidden");
+  jimakuModal.setAttribute("aria-hidden", "true");
   if (!isOverSubtitle) {
-    overlay.classList.remove('interactive');
+    overlay.classList.remove("interactive");
   }
   resetJimakuLists();
 }
@@ -354,25 +386,25 @@ function formatEntryLabel(entry: JimakuEntry): string {
 }
 
 function renderEntries(): void {
-  jimakuEntriesList.innerHTML = '';
+  jimakuEntriesList.innerHTML = "";
   if (jimakuEntries.length === 0) {
-    jimakuEntriesSection.classList.add('hidden');
+    jimakuEntriesSection.classList.add("hidden");
     return;
   }
-  jimakuEntriesSection.classList.remove('hidden');
+  jimakuEntriesSection.classList.remove("hidden");
   jimakuEntries.forEach((entry, index) => {
-    const li = document.createElement('li');
+    const li = document.createElement("li");
     li.textContent = formatEntryLabel(entry);
     if (entry.japanese_name) {
-      const sub = document.createElement('div');
-      sub.className = 'jimaku-subtext';
+      const sub = document.createElement("div");
+      sub.className = "jimaku-subtext";
       sub.textContent = entry.japanese_name;
       li.appendChild(sub);
     }
     if (index === selectedEntryIndex) {
-      li.classList.add('active');
+      li.classList.add("active");
     }
-    li.addEventListener('click', () => {
+    li.addEventListener("click", () => {
       selectEntry(index);
     });
     jimakuEntriesList.appendChild(li);
@@ -380,8 +412,8 @@ function renderEntries(): void {
 }
 
 function formatBytes(size: number): string {
-  if (!Number.isFinite(size)) return '';
-  const units = ['B', 'KB', 'MB', 'GB'];
+  if (!Number.isFinite(size)) return "";
+  const units = ["B", "KB", "MB", "GB"];
   let value = size;
   let idx = 0;
   while (value >= 1024 && idx < units.length - 1) {
@@ -392,23 +424,23 @@ function formatBytes(size: number): string {
 }
 
 function renderFiles(): void {
-  jimakuFilesList.innerHTML = '';
+  jimakuFilesList.innerHTML = "";
   if (jimakuFiles.length === 0) {
-    jimakuFilesSection.classList.add('hidden');
+    jimakuFilesSection.classList.add("hidden");
     return;
   }
-  jimakuFilesSection.classList.remove('hidden');
+  jimakuFilesSection.classList.remove("hidden");
   jimakuFiles.forEach((file, index) => {
-    const li = document.createElement('li');
+    const li = document.createElement("li");
     li.textContent = file.name;
-    const sub = document.createElement('div');
-    sub.className = 'jimaku-subtext';
+    const sub = document.createElement("div");
+    sub.className = "jimaku-subtext";
     sub.textContent = `${formatBytes(file.size)} • ${file.last_modified}`;
     li.appendChild(sub);
     if (index === selectedFileIndex) {
-      li.classList.add('active');
+      li.classList.add("active");
     }
-    li.addEventListener('click', () => {
+    li.addEventListener("click", () => {
       selectFile(index);
     });
     jimakuFilesList.appendChild(li);
@@ -417,25 +449,29 @@ function renderFiles(): void {
 
 function getSearchQuery(): { query: string; episode: number | null } {
   const title = jimakuTitleInput.value.trim();
-  const season = jimakuSeasonInput.value ? Number.parseInt(jimakuSeasonInput.value, 10) : null;
-  const episode = jimakuEpisodeInput.value ? Number.parseInt(jimakuEpisodeInput.value, 10) : null;
-  const query = season ? `${title} Season ${season}` : title;
+  const episode = jimakuEpisodeInput.value
+    ? Number.parseInt(jimakuEpisodeInput.value, 10)
+    : null;
+  const query = title;
   return { query, episode: Number.isFinite(episode) ? episode : null };
 }
 
 async function performJimakuSearch(): Promise<void> {
   const { query, episode } = getSearchQuery();
   if (!query) {
-    setJimakuStatus('Enter a title before searching.', true);
+    setJimakuStatus("Enter a title before searching.", true);
     return;
   }
   resetJimakuLists();
-  setJimakuStatus('Searching Jimaku...');
+  setJimakuStatus("Searching Jimaku...");
   currentEpisodeFilter = episode;
 
-  const response: JimakuApiResponse<JimakuEntry[]> = await window.electronAPI.jimakuSearchEntries({ query });
+  const response: JimakuApiResponse<JimakuEntry[]> =
+    await window.electronAPI.jimakuSearchEntries({ query });
   if (!response.ok) {
-    const retry = response.error.retryAfter ? ` Retry after ${response.error.retryAfter.toFixed(1)}s.` : '';
+    const retry = response.error.retryAfter
+      ? ` Retry after ${response.error.retryAfter.toFixed(1)}s.`
+      : "";
     setJimakuStatus(`${response.error.error}${retry}`, true);
     return;
   }
@@ -443,29 +479,35 @@ async function performJimakuSearch(): Promise<void> {
   jimakuEntries = response.data;
   selectedEntryIndex = 0;
   if (jimakuEntries.length === 0) {
-    setJimakuStatus('No entries found.');
+    setJimakuStatus("No entries found.");
     return;
   }
-  setJimakuStatus('Select an entry.');
+  setJimakuStatus("Select an entry.");
   renderEntries();
   if (jimakuEntries.length === 1) {
     selectEntry(0);
   }
 }
 
-async function loadFiles(entryId: number, episode: number | null): Promise<void> {
-  setJimakuStatus('Loading files...');
+async function loadFiles(
+  entryId: number,
+  episode: number | null,
+): Promise<void> {
+  setJimakuStatus("Loading files...");
   jimakuFiles = [];
   selectedFileIndex = 0;
-  jimakuFilesList.innerHTML = '';
-  jimakuFilesSection.classList.add('hidden');
+  jimakuFilesList.innerHTML = "";
+  jimakuFilesSection.classList.add("hidden");
 
-  const response: JimakuApiResponse<JimakuFileEntry[]> = await window.electronAPI.jimakuListFiles({
-    entryId,
-    episode,
-  });
+  const response: JimakuApiResponse<JimakuFileEntry[]> =
+    await window.electronAPI.jimakuListFiles({
+      entryId,
+      episode,
+    });
   if (!response.ok) {
-    const retry = response.error.retryAfter ? ` Retry after ${response.error.retryAfter.toFixed(1)}s.` : '';
+    const retry = response.error.retryAfter
+      ? ` Retry after ${response.error.retryAfter.toFixed(1)}s.`
+      : "";
     setJimakuStatus(`${response.error.error}${retry}`, true);
     return;
   }
@@ -473,16 +515,16 @@ async function loadFiles(entryId: number, episode: number | null): Promise<void>
   jimakuFiles = response.data;
   if (jimakuFiles.length === 0) {
     if (episode !== null) {
-      setJimakuStatus('No files found for this episode.');
-      jimakuBroadenButton.classList.remove('hidden');
+      setJimakuStatus("No files found for this episode.");
+      jimakuBroadenButton.classList.remove("hidden");
     } else {
-      setJimakuStatus('No files found.');
+      setJimakuStatus("No files found.");
     }
     return;
   }
 
-  jimakuBroadenButton.classList.add('hidden');
-  setJimakuStatus('Select a subtitle file.');
+  jimakuBroadenButton.classList.add("hidden");
+  setJimakuStatus("Select a subtitle file.");
   renderFiles();
   if (jimakuFiles.length === 1) {
     selectFile(0);
@@ -504,22 +546,25 @@ async function selectFile(index: number): Promise<void> {
   selectedFileIndex = index;
   renderFiles();
   if (currentEntryId === null) {
-    setJimakuStatus('Select an entry first.', true);
+    setJimakuStatus("Select an entry first.", true);
     return;
   }
 
   const file = jimakuFiles[index];
-  setJimakuStatus('Downloading subtitle...');
-  const result: JimakuDownloadResult = await window.electronAPI.jimakuDownloadFile({
-    entryId: currentEntryId,
-    url: file.url,
-    name: file.name,
-  });
+  setJimakuStatus("Downloading subtitle...");
+  const result: JimakuDownloadResult =
+    await window.electronAPI.jimakuDownloadFile({
+      entryId: currentEntryId,
+      url: file.url,
+      name: file.name,
+    });
 
   if (result.ok) {
     setJimakuStatus(`Downloaded and loaded: ${result.path}`);
   } else {
-    const retry = result.error.retryAfter ? ` Retry after ${result.error.retryAfter.toFixed(1)}s.` : '';
+    const retry = result.error.retryAfter
+      ? ` Retry after ${result.error.retryAfter.toFixed(1)}s.`
+      : "";
     setJimakuStatus(`${result.error.error}${retry}`, true);
   }
 }
@@ -528,18 +573,18 @@ function isTextInputFocused(): boolean {
   const active = document.activeElement;
   if (!active) return false;
   const tag = active.tagName.toLowerCase();
-  return tag === 'input' || tag === 'textarea';
+  return tag === "input" || tag === "textarea";
 }
 
 function handleJimakuKeydown(e: KeyboardEvent): boolean {
-  if (e.key === 'Escape') {
+  if (e.key === "Escape") {
     e.preventDefault();
     closeJimakuModal();
     return true;
   }
 
   if (isTextInputFocused()) {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       e.preventDefault();
       performJimakuSearch();
       return true;
@@ -547,19 +592,25 @@ function handleJimakuKeydown(e: KeyboardEvent): boolean {
     return true;
   }
 
-  if (e.key === 'ArrowDown') {
+  if (e.key === "ArrowDown") {
     e.preventDefault();
     if (jimakuFiles.length > 0) {
-      selectedFileIndex = Math.min(jimakuFiles.length - 1, selectedFileIndex + 1);
+      selectedFileIndex = Math.min(
+        jimakuFiles.length - 1,
+        selectedFileIndex + 1,
+      );
       renderFiles();
     } else if (jimakuEntries.length > 0) {
-      selectedEntryIndex = Math.min(jimakuEntries.length - 1, selectedEntryIndex + 1);
+      selectedEntryIndex = Math.min(
+        jimakuEntries.length - 1,
+        selectedEntryIndex + 1,
+      );
       renderEntries();
     }
     return true;
   }
 
-  if (e.key === 'ArrowUp') {
+  if (e.key === "ArrowUp") {
     e.preventDefault();
     if (jimakuFiles.length > 0) {
       selectedFileIndex = Math.max(0, selectedFileIndex - 1);
@@ -571,7 +622,7 @@ function handleJimakuKeydown(e: KeyboardEvent): boolean {
     return true;
   }
 
-  if (e.key === 'Enter') {
+  if (e.key === "Enter") {
     e.preventDefault();
     if (jimakuFiles.length > 0) {
       selectFile(selectedFileIndex);
@@ -587,17 +638,17 @@ function handleJimakuKeydown(e: KeyboardEvent): boolean {
 }
 
 function setupDragging(): void {
-  subtitleContainer.addEventListener('mousedown', (e: MouseEvent) => {
+  subtitleContainer.addEventListener("mousedown", (e: MouseEvent) => {
     if (e.button === 2) {
       e.preventDefault();
       isDragging = true;
       dragStartY = e.clientY;
       startYPercent = getCurrentYPercent();
-      subtitleContainer.style.cursor = 'grabbing';
+      subtitleContainer.style.cursor = "grabbing";
     }
   });
 
-  document.addEventListener('mousemove', (e: MouseEvent) => {
+  document.addEventListener("mousemove", (e: MouseEvent) => {
     if (!isDragging) return;
 
     const deltaY = dragStartY - e.clientY;
@@ -607,17 +658,17 @@ function setupDragging(): void {
     applyYPercent(newYPercent);
   });
 
-  document.addEventListener('mouseup', (e: MouseEvent) => {
+  document.addEventListener("mouseup", (e: MouseEvent) => {
     if (isDragging && e.button === 2) {
       isDragging = false;
-      subtitleContainer.style.cursor = '';
+      subtitleContainer.style.cursor = "";
 
       const yPercent = getCurrentYPercent();
       window.electronAPI.saveSubtitlePosition({ yPercent });
     }
   });
 
-  subtitleContainer.addEventListener('contextmenu', (e: Event) => {
+  subtitleContainer.addEventListener("contextmenu", (e: Event) => {
     e.preventDefault();
   });
 }
@@ -625,38 +676,59 @@ function setupDragging(): void {
 function isInteractiveTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false;
   if (subtitleContainer.contains(target)) return true;
-  if (target.tagName === 'IFRAME' && target.id && target.id.startsWith('yomitan-popup')) return true;
-  if (target.closest && target.closest('iframe[id^="yomitan-popup"]')) return true;
+  if (
+    target.tagName === "IFRAME" &&
+    target.id &&
+    target.id.startsWith("yomitan-popup")
+  )
+    return true;
+  if (target.closest && target.closest('iframe[id^="yomitan-popup"]'))
+    return true;
   return false;
 }
 
 function keyEventToString(e: KeyboardEvent): string {
   const parts: string[] = [];
-  if (e.ctrlKey) parts.push('Ctrl');
-  if (e.altKey) parts.push('Alt');
-  if (e.shiftKey) parts.push('Shift');
-  if (e.metaKey) parts.push('Meta');
+  if (e.ctrlKey) parts.push("Ctrl");
+  if (e.altKey) parts.push("Alt");
+  if (e.shiftKey) parts.push("Shift");
+  if (e.metaKey) parts.push("Meta");
   parts.push(e.code);
-  return parts.join('+');
+  return parts.join("+");
 }
 
 let keybindingsMap = new Map<string, (string | number)[]>();
 
 type ChordAction =
-  | { type: 'mpv'; command: string[] }
-  | { type: 'electron'; action: () => void }
-  | { type: 'noop' };
+  | { type: "mpv"; command: string[] }
+  | { type: "electron"; action: () => void }
+  | { type: "noop" };
 
 const CHORD_MAP = new Map<string, ChordAction>([
-  ['KeyT', { type: 'electron', action: () => window.electronAPI.toggleOverlay() }],
-  ['Shift+KeyS', { type: 'electron', action: () => window.electronAPI.quitApp() }],
-  ['KeyO', { type: 'electron', action: () => window.electronAPI.openYomitanSettings() }],
-  ['KeyR', { type: 'mpv', command: ['script-message', 'subminer-restart'] }],
-  ['KeyC', { type: 'mpv', command: ['script-message', 'subminer-status'] }],
-  ['KeyY', { type: 'mpv', command: ['script-message', 'subminer-menu'] }],
-  ['KeyJ', { type: 'electron', action: () => openJimakuModal() }],
-  ['KeyD', { type: 'electron', action: () => window.electronAPI.toggleDevTools() }],
-  ['KeyS', { type: 'noop' }],
+  [
+    "KeyT",
+    { type: "electron", action: () => window.electronAPI.toggleOverlay() },
+  ],
+  [
+    "Shift+KeyS",
+    { type: "electron", action: () => window.electronAPI.quitApp() },
+  ],
+  [
+    "KeyO",
+    {
+      type: "electron",
+      action: () => window.electronAPI.openYomitanSettings(),
+    },
+  ],
+  ["KeyR", { type: "mpv", command: ["script-message", "subminer-restart"] }],
+  ["KeyC", { type: "mpv", command: ["script-message", "subminer-status"] }],
+  ["KeyY", { type: "mpv", command: ["script-message", "subminer-menu"] }],
+  ["KeyJ", { type: "electron", action: () => openJimakuModal() }],
+  [
+    "KeyD",
+    { type: "electron", action: () => window.electronAPI.toggleDevTools() },
+  ],
+  ["KeyS", { type: "noop" }],
 ]);
 
 let chordPending = false;
@@ -679,7 +751,7 @@ async function setupMpvInputForwarding(): Promise<void> {
     }
   }
 
-  document.addEventListener('keydown', (e: KeyboardEvent) => {
+  document.addEventListener("keydown", (e: KeyboardEvent) => {
     const yomitanPopup = document.querySelector('iframe[id^="yomitan-popup"]');
     if (yomitanPopup) return;
 
@@ -689,8 +761,16 @@ async function setupMpvInputForwarding(): Promise<void> {
     }
 
     if (chordPending) {
-      const modifierKeys = ['ShiftLeft', 'ShiftRight', 'ControlLeft', 'ControlRight',
-                            'AltLeft', 'AltRight', 'MetaLeft', 'MetaRight'];
+      const modifierKeys = [
+        "ShiftLeft",
+        "ShiftRight",
+        "ControlLeft",
+        "ControlRight",
+        "AltLeft",
+        "AltRight",
+        "MetaLeft",
+        "MetaRight",
+      ];
       if (modifierKeys.includes(e.code)) {
         return;
       }
@@ -700,16 +780,23 @@ async function setupMpvInputForwarding(): Promise<void> {
       const action = CHORD_MAP.get(secondKey);
       resetChord();
       if (action) {
-        if (action.type === 'mpv') {
+        if (action.type === "mpv") {
           window.electronAPI.sendMpvCommand(action.command);
-        } else if (action.type === 'electron') {
+        } else if (action.type === "electron") {
           action.action();
         }
       }
       return;
     }
 
-    if (e.code === 'KeyY' && !e.ctrlKey && !e.altKey && !e.shiftKey && !e.metaKey && !e.repeat) {
+    if (
+      e.code === "KeyY" &&
+      !e.ctrlKey &&
+      !e.altKey &&
+      !e.shiftKey &&
+      !e.metaKey &&
+      !e.repeat
+    ) {
       e.preventDefault();
       chordPending = true;
       chordTimeout = setTimeout(() => {
@@ -727,14 +814,14 @@ async function setupMpvInputForwarding(): Promise<void> {
     }
   });
 
-  document.addEventListener('mousedown', (e: MouseEvent) => {
+  document.addEventListener("mousedown", (e: MouseEvent) => {
     if (e.button === 2 && !isInteractiveTarget(e.target)) {
       e.preventDefault();
-      window.electronAPI.sendMpvCommand(['cycle', 'pause']);
+      window.electronAPI.sendMpvCommand(["cycle", "pause"]);
     }
   });
 
-  document.addEventListener('contextmenu', (e: Event) => {
+  document.addEventListener("contextmenu", (e: Event) => {
     if (!isInteractiveTarget(e.target)) {
       e.preventDefault();
     }
@@ -742,7 +829,7 @@ async function setupMpvInputForwarding(): Promise<void> {
 }
 
 function setupResizeHandler(): void {
-  window.addEventListener('resize', () => {
+  window.addEventListener("resize", () => {
     const currentYPercent = getCurrentYPercent();
     applyYPercent(currentYPercent);
   });
@@ -750,26 +837,27 @@ function setupResizeHandler(): void {
 
 async function restoreSubtitlePosition(): Promise<void> {
   const position = await window.electronAPI.getSubtitlePosition();
-  applyStoredSubtitlePosition(position, 'startup');
+  applyStoredSubtitlePosition(position, "startup");
 }
 
 async function restoreSubtitleFontSize(): Promise<void> {
   const style = await window.electronAPI.getSubtitleStyle();
   if (style && style.fontSize !== undefined) {
     applySubtitleFontSize(style.fontSize);
-    console.log('Applied subtitle font size:', style.fontSize);
+    console.log("Applied subtitle font size:", style.fontSize);
   }
 }
 
 function setupSelectionObserver(): void {
-  document.addEventListener('selectionchange', () => {
+  document.addEventListener("selectionchange", () => {
     const selection = window.getSelection();
-    const hasSelection = selection && selection.rangeCount > 0 && !selection.isCollapsed;
+    const hasSelection =
+      selection && selection.rangeCount > 0 && !selection.isCollapsed;
 
     if (hasSelection) {
-      subtitleRoot.classList.add('has-selection');
+      subtitleRoot.classList.add("has-selection");
     } else {
-      subtitleRoot.classList.remove('has-selection');
+      subtitleRoot.classList.remove("has-selection");
     }
   });
 }
@@ -780,17 +868,25 @@ function setupYomitanObserver(): void {
       mutation.addedNodes.forEach((node) => {
         if (node.nodeType === Node.ELEMENT_NODE) {
           const element = node as Element;
-          if (element.tagName === 'IFRAME' && element.id && element.id.startsWith('yomitan-popup')) {
-            overlay.classList.add('interactive');
+          if (
+            element.tagName === "IFRAME" &&
+            element.id &&
+            element.id.startsWith("yomitan-popup")
+          ) {
+            overlay.classList.add("interactive");
           }
         }
       });
       mutation.removedNodes.forEach((node) => {
         if (node.nodeType === Node.ELEMENT_NODE) {
           const element = node as Element;
-          if (element.tagName === 'IFRAME' && element.id && element.id.startsWith('yomitan-popup')) {
+          if (
+            element.tagName === "IFRAME" &&
+            element.id &&
+            element.id.startsWith("yomitan-popup")
+          ) {
             if (!isOverSubtitle && !jimakuModalOpen) {
-              overlay.classList.remove('interactive');
+              overlay.classList.remove("interactive");
             }
           }
         }
@@ -800,39 +896,39 @@ function setupYomitanObserver(): void {
 
   observer.observe(document.body, {
     childList: true,
-    subtree: true
+    subtree: true,
   });
 }
 
 function renderSecondarySub(text: string): void {
-  secondarySubRoot.innerHTML = '';
+  secondarySubRoot.innerHTML = "";
   if (!text) return;
 
   let normalized = text
-    .replace(/\\N/g, '\n')
-    .replace(/\\n/g, '\n')
-    .replace(/\{[^}]*\}/g, '')
+    .replace(/\\N/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\{[^}]*\}/g, "")
     .trim();
 
   if (!normalized) return;
 
-  const lines = normalized.split('\n');
+  const lines = normalized.split("\n");
   for (let i = 0; i < lines.length; i++) {
     if (lines[i]) {
       const textNode = document.createTextNode(lines[i]);
       secondarySubRoot.appendChild(textNode);
     }
     if (i < lines.length - 1) {
-      secondarySubRoot.appendChild(document.createElement('br'));
+      secondarySubRoot.appendChild(document.createElement("br"));
     }
   }
 }
 
 function updateSecondarySubMode(mode: SecondarySubMode): void {
   secondarySubContainer.classList.remove(
-    'secondary-sub-hidden',
-    'secondary-sub-visible',
-    'secondary-sub-hover'
+    "secondary-sub-hidden",
+    "secondary-sub-visible",
+    "secondary-sub-hover",
   );
   secondarySubContainer.classList.add(`secondary-sub-${mode}`);
 }
@@ -889,7 +985,7 @@ async function init(): Promise<void> {
   });
 
   window.electronAPI.onSubtitlePosition((position: SubtitlePosition | null) => {
-    applyStoredSubtitlePosition(position, 'media-change');
+    applyStoredSubtitlePosition(position, "media-change");
   });
 
   const initialSubtitle = await window.electronAPI.getCurrentSubtitle();
@@ -909,23 +1005,23 @@ async function init(): Promise<void> {
   const initialSecondary = await window.electronAPI.getCurrentSecondarySub();
   renderSecondarySub(initialSecondary);
 
-  subtitleContainer.addEventListener('mouseenter', handleMouseEnter);
-  subtitleContainer.addEventListener('mouseleave', handleMouseLeave);
+  subtitleContainer.addEventListener("mouseenter", handleMouseEnter);
+  subtitleContainer.addEventListener("mouseleave", handleMouseLeave);
 
-  secondarySubContainer.addEventListener('mouseenter', handleMouseEnter);
-  secondarySubContainer.addEventListener('mouseleave', handleMouseLeave);
+  secondarySubContainer.addEventListener("mouseenter", handleMouseEnter);
+  secondarySubContainer.addEventListener("mouseleave", handleMouseLeave);
 
-  jimakuSearchButton.addEventListener('click', () => {
+  jimakuSearchButton.addEventListener("click", () => {
     performJimakuSearch();
   });
 
-  jimakuCloseButton.addEventListener('click', () => {
+  jimakuCloseButton.addEventListener("click", () => {
     closeJimakuModal();
   });
 
-  jimakuBroadenButton.addEventListener('click', () => {
+  jimakuBroadenButton.addEventListener("click", () => {
     if (currentEntryId !== null) {
-      jimakuBroadenButton.classList.add('hidden');
+      jimakuBroadenButton.classList.add("hidden");
       loadFiles(currentEntryId, null);
     }
   });
@@ -946,8 +1042,8 @@ async function init(): Promise<void> {
   setupSelectionObserver();
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
 } else {
   init();
 }

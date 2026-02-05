@@ -250,7 +250,8 @@ let pendingMultiCopyTimeout: ReturnType<typeof setTimeout> | null = null;
 let multiCopyDigitShortcuts: string[] = [];
 let multiCopyEscapeShortcut: string | null = null;
 let pendingMineSentenceMultiple = false;
-let pendingMineSentenceMultipleTimeout: ReturnType<typeof setTimeout> | null = null;
+let pendingMineSentenceMultipleTimeout: ReturnType<typeof setTimeout> | null =
+  null;
 let mineSentenceDigitShortcuts: string[] = [];
 let mineSentenceEscapeShortcut: string | null = null;
 
@@ -333,7 +334,9 @@ function getJimakuMaxEntryResults(): number {
   return DEFAULT_JIMAKU_MAX_RESULTS;
 }
 
-function execCommand(command: string): Promise<{ stdout: string; stderr: string }> {
+function execCommand(
+  command: string,
+): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
     childProcess.exec(command, { timeout: 10000 }, (err, stdout, stderr) => {
       if (err) {
@@ -348,18 +351,28 @@ function execCommand(command: string): Promise<{ stdout: string; stderr: string 
 async function resolveJimakuApiKey(): Promise<string | null> {
   const config = getJimakuConfig();
   if (config.apiKey && config.apiKey.trim()) {
+    console.log("[jimaku] API key found in config");
     return config.apiKey.trim();
   }
   if (config.apiKeyCommand && config.apiKeyCommand.trim()) {
     try {
       const { stdout } = await execCommand(config.apiKeyCommand);
       const key = stdout.trim();
+      console.log(
+        `[jimaku] apiKeyCommand result: ${key.length > 0 ? "key obtained" : "empty output"}`,
+      );
       return key.length > 0 ? key : null;
     } catch (err) {
-      console.error("Failed to run jimaku.apiKeyCommand:", (err as Error).message);
+      console.error(
+        "Failed to run jimaku.apiKeyCommand:",
+        (err as Error).message,
+      );
       return null;
     }
   }
+  console.log(
+    "[jimaku] No API key configured (neither apiKey nor apiKeyCommand set)",
+  );
   return null;
 }
 
@@ -381,7 +394,8 @@ async function jimakuFetchJson<T>(
     return {
       ok: false,
       error: {
-        error: "Jimaku API key not set. Configure jimaku.apiKey or jimaku.apiKeyCommand.",
+        error:
+          "Jimaku API key not set. Configure jimaku.apiKey or jimaku.apiKeyCommand.",
         code: 401,
       },
     };
@@ -394,6 +408,7 @@ async function jimakuFetchJson<T>(
     url.searchParams.set(key, String(value));
   }
 
+  console.log(`[jimaku] GET ${url.toString()}`);
   const transport = url.protocol === "https:" ? https : http;
 
   return new Promise((resolve) => {
@@ -413,11 +428,13 @@ async function jimakuFetchJson<T>(
         });
         res.on("end", () => {
           const status = res.statusCode || 0;
+          console.log(`[jimaku] Response HTTP ${status} for ${endpoint}`);
           if (status >= 200 && status < 300) {
             try {
               const parsed = JSON.parse(data) as T;
               resolve({ ok: true, data: parsed });
             } catch (err) {
+              console.error(`[jimaku] JSON parse error: ${data.slice(0, 200)}`);
               resolve({
                 ok: false,
                 error: { error: "Failed to parse Jimaku response JSON." },
@@ -435,13 +452,15 @@ async function jimakuFetchJson<T>(
           } catch (err) {
             // Ignore parse errors.
           }
+          console.error(`[jimaku] API error: ${errorMessage}`);
 
           resolve({
             ok: false,
             error: {
               error: errorMessage,
               code: status || undefined,
-              retryAfter: status === 429 ? getRetryAfter(res.headers) : undefined,
+              retryAfter:
+                status === 429 ? getRetryAfter(res.headers) : undefined,
             },
           });
         });
@@ -449,6 +468,7 @@ async function jimakuFetchJson<T>(
     );
 
     req.on("error", (err) => {
+      console.error(`[jimaku] Network error: ${(err as Error).message}`);
       resolve({
         ok: false,
         error: { error: `Jimaku request failed: ${(err as Error).message}` },
@@ -459,7 +479,12 @@ async function jimakuFetchJson<T>(
   });
 }
 
-function matchEpisodeFromName(name: string): { season: number | null; episode: number | null; index: number | null; confidence: "high" | "medium" | "low" } {
+function matchEpisodeFromName(name: string): {
+  season: number | null;
+  episode: number | null;
+  index: number | null;
+  confidence: "high" | "medium" | "low";
+} {
   const seasonEpisode = name.match(/S(\d{1,2})E(\d{1,3})/i);
   if (seasonEpisode && seasonEpisode.index !== undefined) {
     return {
@@ -578,7 +603,11 @@ function loadSubtitlePosition(): SubtitlePosition | null {
 
     const data = fs.readFileSync(positionPath, "utf-8");
     const parsed = JSON.parse(data) as Partial<SubtitlePosition>;
-    if (parsed && typeof parsed.yPercent === "number" && Number.isFinite(parsed.yPercent)) {
+    if (
+      parsed &&
+      typeof parsed.yPercent === "number" &&
+      Number.isFinite(parsed.yPercent)
+    ) {
       subtitlePosition = { yPercent: parsed.yPercent };
     } else {
       subtitlePosition = null;
@@ -610,7 +639,10 @@ function saveSubtitlePosition(position: SubtitlePosition): void {
 }
 
 function updateCurrentMediaPath(mediaPath: unknown): void {
-  const nextPath = typeof mediaPath === "string" && mediaPath.trim().length > 0 ? mediaPath : null;
+  const nextPath =
+    typeof mediaPath === "string" && mediaPath.trim().length > 0
+      ? mediaPath
+      : null;
   if (nextPath === currentMediaPath) return;
   currentMediaPath = nextPath;
   const position = loadSubtitlePosition();
@@ -671,9 +703,7 @@ function startTexthookerServer(port: number): http.Server | null {
   });
 
   texthookerServer.listen(port, "127.0.0.1", () => {
-    console.log(
-      `Texthooker server running at http://127.0.0.1:${port}`,
-    );
+    console.log(`Texthooker server running at http://127.0.0.1:${port}`);
   });
 
   return texthookerServer;
@@ -795,7 +825,9 @@ if (!gotTheLock) {
       if (wsEnabled === true || (wsEnabled === "auto" && !hasMpvWebsocket())) {
         startSubtitleWebSocketServer(wsPort);
       } else if (wsEnabled === "auto") {
-        console.log("mpv_websocket detected, skipping built-in WebSocket server");
+        console.log(
+          "mpv_websocket detected, skipping built-in WebSocket server",
+        );
       }
 
       mecabTokenizer = new MecabTokenizer();
@@ -926,9 +958,7 @@ function handleCliCommand(args: CliArgs): void {
     if (openBrowser) {
       shell.openExternal(`http://127.0.0.1:${texthookerPort}`);
     }
-    console.log(
-      `Texthooker available at http://127.0.0.1:${texthookerPort}`,
-    );
+    console.log(`Texthooker available at http://127.0.0.1:${texthookerPort}`);
   } else if (args.help) {
     printHelp();
     if (!mainWindow) app.quit();
@@ -1035,7 +1065,9 @@ class MpvIpcClient {
       delay = 2000;
     }
     reconnectTimer = setTimeout(() => {
-      console.log(`Attempting to reconnect to MPV (attempt ${attempt + 1}, delay ${delay}ms)...`);
+      console.log(
+        `Attempting to reconnect to MPV (attempt ${attempt + 1}, delay ${delay}ms)...`,
+      );
       this.connect();
     }, delay);
   }
@@ -1102,11 +1134,17 @@ class MpvIpcClient {
       } else if (msg.name === "secondary-sub-text") {
         this.currentSecondarySubText = (msg.data as string) || "";
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send("secondary-subtitle:set", this.currentSecondarySubText);
+          mainWindow.webContents.send(
+            "secondary-subtitle:set",
+            this.currentSecondarySubText,
+          );
         }
       } else if (msg.name === "time-pos") {
         this.currentTimePos = (msg.data as number) || 0;
-        if (this.pauseAtTime !== null && this.currentTimePos >= this.pauseAtTime) {
+        if (
+          this.pauseAtTime !== null &&
+          this.currentTimePos >= this.pauseAtTime
+        ) {
           this.pauseAtTime = null;
           this.send({ command: ["set_property", "pause", true] });
         }
@@ -1117,7 +1155,11 @@ class MpvIpcClient {
       }
     } else if (msg.data !== undefined && msg.request_id) {
       if (msg.request_id === MPV_REQUEST_ID_TRACK_LIST) {
-        const tracks = msg.data as Array<{ type: string; lang?: string; id: number }>;
+        const tracks = msg.data as Array<{
+          type: string;
+          lang?: string;
+          id: number;
+        }>;
         if (Array.isArray(tracks)) {
           const { config } = loadConfig();
           const languages = config.secondarySub?.secondarySubLanguages || [];
@@ -1125,7 +1167,9 @@ class MpvIpcClient {
           for (const lang of languages) {
             const match = subTracks.find((t) => t.lang === lang);
             if (match) {
-              this.send({ command: ["set_property", "secondary-sid", match.id] });
+              this.send({
+                command: ["set_property", "secondary-sid", match.id],
+              });
               showMpvOsd(`Secondary subtitle: ${lang} (track ${match.id})`);
               break;
             }
@@ -1147,11 +1191,17 @@ class MpvIpcClient {
       } else if (msg.request_id === MPV_REQUEST_ID_SECONDARY_SUBTEXT) {
         this.currentSecondarySubText = (msg.data as string) || "";
         if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send("secondary-subtitle:set", this.currentSecondarySubText);
+          mainWindow.webContents.send(
+            "secondary-subtitle:set",
+            this.currentSecondarySubText,
+          );
         }
       } else if (msg.request_id === MPV_REQUEST_ID_SECONDARY_SUB_VISIBILITY) {
-        previousSecondarySubVisibility = msg.data === true || msg.data === "yes";
-        this.send({ command: ["set_property", "secondary-sub-visibility", "no"] });
+        previousSecondarySubVisibility =
+          msg.data === true || msg.data === "yes";
+        this.send({
+          command: ["set_property", "secondary-sub-visibility", "no"],
+        });
       }
     }
   }
@@ -1163,7 +1213,10 @@ class MpvIpcClient {
     if (!languages || languages.length === 0) return;
 
     setTimeout(() => {
-      this.send({ command: ["get_property", "track-list"], request_id: MPV_REQUEST_ID_TRACK_LIST });
+      this.send({
+        command: ["get_property", "track-list"],
+        request_id: MPV_REQUEST_ID_TRACK_LIST,
+      });
     }, 500);
   }
 
@@ -1186,9 +1239,18 @@ class MpvIpcClient {
   }
 
   private getInitialState(): void {
-    this.send({ command: ["get_property", "sub-text"], request_id: MPV_REQUEST_ID_SUBTEXT });
-    this.send({ command: ["get_property", "path"], request_id: MPV_REQUEST_ID_PATH });
-    this.send({ command: ["get_property", "secondary-sub-text"], request_id: MPV_REQUEST_ID_SECONDARY_SUBTEXT });
+    this.send({
+      command: ["get_property", "sub-text"],
+      request_id: MPV_REQUEST_ID_SUBTEXT,
+    });
+    this.send({
+      command: ["get_property", "path"],
+      request_id: MPV_REQUEST_ID_PATH,
+    });
+    this.send({
+      command: ["get_property", "secondary-sub-text"],
+      request_id: MPV_REQUEST_ID_SECONDARY_SUBTEXT,
+    });
   }
 
   setSubVisibility(visible: boolean): void {
@@ -1542,8 +1604,14 @@ function showMpvOsd(text: string): void {
 function formatLangScore(name: string, pref: JimakuLanguagePreference): number {
   if (pref === "none") return 0;
   const upper = name.toUpperCase();
-  const hasJa = /(^|[\W_])JA([\W_]|$)/.test(upper) || /(^|[\W_])JPN([\W_]|$)/.test(upper) || upper.includes(".JA.");
-  const hasEn = /(^|[\W_])EN([\W_]|$)/.test(upper) || /(^|[\W_])ENG([\W_]|$)/.test(upper) || upper.includes(".EN.");
+  const hasJa =
+    /(^|[\W_])JA([\W_]|$)/.test(upper) ||
+    /(^|[\W_])JPN([\W_]|$)/.test(upper) ||
+    upper.includes(".JA.");
+  const hasEn =
+    /(^|[\W_])EN([\W_]|$)/.test(upper) ||
+    /(^|[\W_])ENG([\W_]|$)/.test(upper) ||
+    upper.includes(".EN.");
   if (pref === "ja") {
     if (hasJa) return 2;
     if (hasEn) return 1;
@@ -1554,10 +1622,14 @@ function formatLangScore(name: string, pref: JimakuLanguagePreference): number {
   return 0;
 }
 
-function sortJimakuFiles(files: JimakuFileEntry[], pref: JimakuLanguagePreference): JimakuFileEntry[] {
+function sortJimakuFiles(
+  files: JimakuFileEntry[],
+  pref: JimakuLanguagePreference,
+): JimakuFileEntry[] {
   if (pref === "none") return files;
   return [...files].sort((a, b) => {
-    const scoreDiff = formatLangScore(b.name, pref) - formatLangScore(a.name, pref);
+    const scoreDiff =
+      formatLangScore(b.name, pref) - formatLangScore(a.name, pref);
     if (scoreDiff !== 0) return scoreDiff;
     return a.name.localeCompare(b.name);
   });
@@ -1574,49 +1646,55 @@ async function downloadToFile(
   redirectCount = 0,
 ): Promise<JimakuDownloadResult> {
   if (redirectCount > 3) {
-    return { ok: false, error: { error: "Too many redirects while downloading subtitle." } };
+    return {
+      ok: false,
+      error: { error: "Too many redirects while downloading subtitle." },
+    };
   }
 
   return new Promise((resolve) => {
     const parsedUrl = new URL(url);
     const transport = parsedUrl.protocol === "https:" ? https : http;
 
-    const req = transport.get(
-      parsedUrl,
-      { headers },
-      (res) => {
-        const status = res.statusCode || 0;
-        if ([301, 302, 303, 307, 308].includes(status) && res.headers.location) {
-          const redirectUrl = new URL(res.headers.location, parsedUrl).toString();
-          res.resume();
-          downloadToFile(redirectUrl, destPath, headers, redirectCount + 1).then(resolve);
-          return;
-        }
+    const req = transport.get(parsedUrl, { headers }, (res) => {
+      const status = res.statusCode || 0;
+      if ([301, 302, 303, 307, 308].includes(status) && res.headers.location) {
+        const redirectUrl = new URL(res.headers.location, parsedUrl).toString();
+        res.resume();
+        downloadToFile(redirectUrl, destPath, headers, redirectCount + 1).then(
+          resolve,
+        );
+        return;
+      }
 
-        if (status < 200 || status >= 300) {
-          res.resume();
-          resolve({
-            ok: false,
-            error: { error: `Failed to download subtitle (HTTP ${status}).`, code: status },
-          });
-          return;
-        }
+      if (status < 200 || status >= 300) {
+        res.resume();
+        resolve({
+          ok: false,
+          error: {
+            error: `Failed to download subtitle (HTTP ${status}).`,
+            code: status,
+          },
+        });
+        return;
+      }
 
-        const fileStream = fs.createWriteStream(destPath);
-        res.pipe(fileStream);
-        fileStream.on("finish", () => {
-          fileStream.close(() => {
-            resolve({ ok: true, path: destPath });
-          });
+      const fileStream = fs.createWriteStream(destPath);
+      res.pipe(fileStream);
+      fileStream.on("finish", () => {
+        fileStream.close(() => {
+          resolve({ ok: true, path: destPath });
         });
-        fileStream.on("error", (err) => {
-          resolve({
-            ok: false,
-            error: { error: `Failed to save subtitle: ${(err as Error).message}` },
-          });
+      });
+      fileStream.on("error", (err) => {
+        resolve({
+          ok: false,
+          error: {
+            error: `Failed to save subtitle: ${(err as Error).message}`,
+          },
         });
-      },
-    );
+      });
+    });
 
     req.on("error", (err) => {
       resolve({
@@ -1761,7 +1839,12 @@ async function mineSentenceCard(): Promise<void> {
   const endTime = mpvClient.currentSubEnd;
   const secondarySub = mpvClient.currentSecondarySubText || undefined;
 
-  await ankiIntegration.createSentenceCard(text, startTime, endTime, secondarySub);
+  await ankiIntegration.createSentenceCard(
+    text,
+    startTime,
+    endTime,
+    secondarySub,
+  );
 }
 
 function cancelPendingMineSentenceMultiple(): void {
@@ -1817,7 +1900,12 @@ function startPendingMineSentenceMultiple(timeoutMs: number): void {
 }
 
 function handleMineSentenceDigit(count: number): void {
-  if (!pendingMineSentenceMultiple || !subtitleTimingTracker || !ankiIntegration) return;
+  if (
+    !pendingMineSentenceMultiple ||
+    !subtitleTimingTracker ||
+    !ankiIntegration
+  )
+    return;
 
   cancelPendingMineSentenceMultiple();
 
@@ -1846,10 +1934,12 @@ function handleMineSentenceDigit(count: number): void {
   const sentence = blocks.join(" ");
 
   const secondarySub = mpvClient?.currentSecondarySubText || undefined;
-  ankiIntegration.createSentenceCard(sentence, rangeStart, rangeEnd, secondarySub).catch((err) => {
-    console.error("mineSentenceMultiple failed:", err);
-    showMpvOsd(`Mine sentence failed: ${(err as Error).message}`);
-  });
+  ankiIntegration
+    .createSentenceCard(sentence, rangeStart, rangeEnd, secondarySub)
+    .catch((err) => {
+      console.error("mineSentenceMultiple failed:", err);
+      showMpvOsd(`Mine sentence failed: ${(err as Error).message}`);
+    });
 }
 
 function registerOverlayShortcuts(): void {
@@ -1899,7 +1989,10 @@ function registerOverlayShortcuts(): void {
       const idx = cycle.indexOf(secondarySubMode);
       secondarySubMode = cycle[(idx + 1) % cycle.length];
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send("secondary-subtitle:mode", secondarySubMode);
+        mainWindow.webContents.send(
+          "secondary-subtitle:mode",
+          secondarySubMode,
+        );
       }
       showMpvOsd(`Secondary subtitle: ${secondarySubMode}`);
     });
@@ -1939,7 +2032,10 @@ function unregisterOverlayShortcuts(): void {
 }
 
 function updateOverlayVisibility(): void {
-  console.log("updateOverlayVisibility called, overlayVisible:", overlayVisible);
+  console.log(
+    "updateOverlayVisibility called, overlayVisible:",
+    overlayVisible,
+  );
   if (!mainWindow || mainWindow.isDestroyed()) {
     console.log("mainWindow not available");
     return;
@@ -1950,9 +2046,17 @@ function updateOverlayVisibility(): void {
     mainWindow.hide();
     unregisterOverlayShortcuts();
 
-    if (previousSecondarySubVisibility !== null && mpvClient && mpvClient.connected) {
+    if (
+      previousSecondarySubVisibility !== null &&
+      mpvClient &&
+      mpvClient.connected
+    ) {
       mpvClient.send({
-        command: ["set_property", "secondary-sub-visibility", previousSecondarySubVisibility ? "yes" : "no"],
+        command: [
+          "set_property",
+          "secondary-sub-visibility",
+          previousSecondarySubVisibility ? "yes" : "no",
+        ],
       });
       previousSecondarySubVisibility = null;
     }
@@ -1963,7 +2067,10 @@ function updateOverlayVisibility(): void {
     );
 
     if (mpvClient && mpvClient.connected) {
-      mpvClient.send({ command: ["get_property", "secondary-sub-visibility"], request_id: MPV_REQUEST_ID_SECONDARY_SUB_VISIBILITY });
+      mpvClient.send({
+        command: ["get_property", "secondary-sub-visibility"],
+        request_id: MPV_REQUEST_ID_SECONDARY_SUB_VISIBILITY,
+      });
     }
 
     if (windowTracker && windowTracker.isTracking()) {
@@ -1995,7 +2102,6 @@ function setOverlayVisible(visible: boolean): void {
 function toggleOverlay(): void {
   setOverlayVisible(!overlayVisible);
 }
-
 
 ipcMain.on(
   "set-ignore-mouse-events",
@@ -2065,17 +2171,20 @@ ipcMain.on("set-mecab-enabled", (_event: IpcMainEvent, enabled: boolean) => {
   }
 });
 
-ipcMain.on("mpv-command", (_event: IpcMainEvent, command: (string | number)[]) => {
-  if (mpvClient && mpvClient.connected) {
-    if (command[0] === "__replay-subtitle") {
-      mpvClient.replayCurrentSubtitle();
-    } else if (command[0] === "__play-next-subtitle") {
-      mpvClient.playNextSubtitle();
-    } else {
-      mpvClient.send({ command });
+ipcMain.on(
+  "mpv-command",
+  (_event: IpcMainEvent, command: (string | number)[]) => {
+    if (mpvClient && mpvClient.connected) {
+      if (command[0] === "__replay-subtitle") {
+        mpvClient.replayCurrentSubtitle();
+      } else if (command[0] === "__play-next-subtitle") {
+        mpvClient.playNextSubtitle();
+      } else {
+        mpvClient.send({ command });
+      }
     }
-  }
-});
+  },
+);
 
 ipcMain.handle("get-keybindings", () => {
   return keybindings;
@@ -2200,74 +2309,123 @@ ipcMain.handle("jimaku:get-media-info", (): JimakuMediaInfo => {
   return parseMediaInfo(currentMediaPath);
 });
 
-ipcMain.handle("jimaku:search-entries", async (_event, query: JimakuSearchQuery): Promise<JimakuApiResponse<JimakuEntry[]>> => {
-  const response = await jimakuFetchJson<JimakuEntry[]>("/api/entries/search", {
-    anime: true,
-    query: query.query,
-  });
-  if (!response.ok) return response;
-  const maxResults = getJimakuMaxEntryResults();
-  return { ok: true, data: response.data.slice(0, maxResults) };
-});
-
-ipcMain.handle("jimaku:list-files", async (_event, query: JimakuFilesQuery): Promise<JimakuApiResponse<JimakuFileEntry[]>> => {
-  const response = await jimakuFetchJson<JimakuFileEntry[]>(
-    `/api/entries/${query.entryId}/files`,
-    {
-      episode: query.episode ?? undefined,
-    },
-  );
-  if (!response.ok) return response;
-  const sorted = sortJimakuFiles(response.data, getJimakuLanguagePreference());
-  return { ok: true, data: sorted };
-});
-
-ipcMain.handle("jimaku:download-file", async (_event, query: JimakuDownloadQuery): Promise<JimakuDownloadResult> => {
-  const apiKey = await resolveJimakuApiKey();
-  if (!apiKey) {
-    return {
-      ok: false,
-      error: {
-        error: "Jimaku API key not set. Configure jimaku.apiKey or jimaku.apiKeyCommand.",
-        code: 401,
+ipcMain.handle(
+  "jimaku:search-entries",
+  async (
+    _event,
+    query: JimakuSearchQuery,
+  ): Promise<JimakuApiResponse<JimakuEntry[]>> => {
+    console.log(`[jimaku] search-entries query: "${query.query}"`);
+    const response = await jimakuFetchJson<JimakuEntry[]>(
+      "/api/entries/search",
+      {
+        anime: true,
+        query: query.query,
       },
-    };
-  }
+    );
+    if (!response.ok) return response;
+    const maxResults = getJimakuMaxEntryResults();
+    console.log(
+      `[jimaku] search-entries returned ${response.data.length} results (capped to ${maxResults})`,
+    );
+    return { ok: true, data: response.data.slice(0, maxResults) };
+  },
+);
 
-  if (!currentMediaPath) {
-    return { ok: false, error: { error: "No media file loaded in MPV." } };
-  }
+ipcMain.handle(
+  "jimaku:list-files",
+  async (
+    _event,
+    query: JimakuFilesQuery,
+  ): Promise<JimakuApiResponse<JimakuFileEntry[]>> => {
+    console.log(
+      `[jimaku] list-files entryId=${query.entryId} episode=${query.episode ?? "all"}`,
+    );
+    const response = await jimakuFetchJson<JimakuFileEntry[]>(
+      `/api/entries/${query.entryId}/files`,
+      {
+        episode: query.episode ?? undefined,
+      },
+    );
+    if (!response.ok) return response;
+    const sorted = sortJimakuFiles(
+      response.data,
+      getJimakuLanguagePreference(),
+    );
+    console.log(`[jimaku] list-files returned ${sorted.length} files`);
+    return { ok: true, data: sorted };
+  },
+);
 
-  if (isRemoteMediaPath(currentMediaPath)) {
-    return { ok: false, error: { error: "Cannot download subtitles for remote media paths." } };
-  }
-
-  const mediaDir = path.dirname(path.resolve(currentMediaPath));
-  const safeName = path.basename(query.name);
-  if (!safeName) {
-    return { ok: false, error: { error: "Invalid subtitle filename." } };
-  }
-
-  const ext = path.extname(safeName);
-  const baseName = ext ? safeName.slice(0, -ext.length) : safeName;
-  let targetPath = path.join(mediaDir, safeName);
-  if (fs.existsSync(targetPath)) {
-    targetPath = path.join(mediaDir, `${baseName} (jimaku-${query.entryId})${ext}`);
-    let counter = 2;
-    while (fs.existsSync(targetPath)) {
-      targetPath = path.join(mediaDir, `${baseName} (jimaku-${query.entryId}-${counter})${ext}`);
-      counter += 1;
+ipcMain.handle(
+  "jimaku:download-file",
+  async (_event, query: JimakuDownloadQuery): Promise<JimakuDownloadResult> => {
+    const apiKey = await resolveJimakuApiKey();
+    if (!apiKey) {
+      return {
+        ok: false,
+        error: {
+          error:
+            "Jimaku API key not set. Configure jimaku.apiKey or jimaku.apiKeyCommand.",
+          code: 401,
+        },
+      };
     }
-  }
 
-  const result = await downloadToFile(query.url, targetPath, {
-    Authorization: apiKey,
-    "User-Agent": "SubMiner",
-  });
+    if (!currentMediaPath) {
+      return { ok: false, error: { error: "No media file loaded in MPV." } };
+    }
 
-  if (result.ok && mpvClient && mpvClient.connected) {
-    mpvClient.send({ command: ["sub-add", result.path, "select"] });
-  }
+    if (isRemoteMediaPath(currentMediaPath)) {
+      return {
+        ok: false,
+        error: { error: "Cannot download subtitles for remote media paths." },
+      };
+    }
 
-  return result;
-});
+    const mediaDir = path.dirname(path.resolve(currentMediaPath));
+    const safeName = path.basename(query.name);
+    if (!safeName) {
+      return { ok: false, error: { error: "Invalid subtitle filename." } };
+    }
+
+    const ext = path.extname(safeName);
+    const baseName = ext ? safeName.slice(0, -ext.length) : safeName;
+    let targetPath = path.join(mediaDir, safeName);
+    if (fs.existsSync(targetPath)) {
+      targetPath = path.join(
+        mediaDir,
+        `${baseName} (jimaku-${query.entryId})${ext}`,
+      );
+      let counter = 2;
+      while (fs.existsSync(targetPath)) {
+        targetPath = path.join(
+          mediaDir,
+          `${baseName} (jimaku-${query.entryId}-${counter})${ext}`,
+        );
+        counter += 1;
+      }
+    }
+
+    console.log(
+      `[jimaku] download-file name="${query.name}" entryId=${query.entryId}`,
+    );
+    const result = await downloadToFile(query.url, targetPath, {
+      Authorization: apiKey,
+      "User-Agent": "SubMiner",
+    });
+
+    if (result.ok) {
+      console.log(`[jimaku] download-file saved to ${result.path}`);
+      if (mpvClient && mpvClient.connected) {
+        mpvClient.send({ command: ["sub-add", result.path, "select"] });
+      }
+    } else {
+      console.error(
+        `[jimaku] download-file failed: ${result.error?.error ?? "unknown error"}`,
+      );
+    }
+
+    return result;
+  },
+);
