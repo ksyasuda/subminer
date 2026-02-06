@@ -983,7 +983,9 @@ const MPV_REQUEST_ID_SUBTEXT = 101;
 const MPV_REQUEST_ID_PATH = 102;
 const MPV_REQUEST_ID_SECONDARY_SUBTEXT = 103;
 const MPV_REQUEST_ID_SECONDARY_SUB_VISIBILITY = 104;
-const MPV_REQUEST_ID_TRACK_LIST = 200;
+const MPV_REQUEST_ID_AID = 105;
+const MPV_REQUEST_ID_TRACK_LIST_SECONDARY = 200;
+const MPV_REQUEST_ID_TRACK_LIST_AUDIO = 201;
 
 class MpvIpcClient implements MpvClient {
   private socketPath: string;
@@ -998,6 +1000,8 @@ class MpvIpcClient implements MpvClient {
   public currentSubEnd = 0;
   public currentSubText = "";
   public currentSecondarySubText = "";
+  public currentAudioStreamIndex: number | null = null;
+  private currentAudioTrackId: number | null = null;
   private pauseAtTime: number | null = null;
   private pendingPauseAtSubEnd = false;
 
@@ -1142,6 +1146,10 @@ class MpvIpcClient implements MpvClient {
             this.currentSecondarySubText,
           );
         }
+      } else if (msg.name === "aid") {
+        this.currentAudioTrackId =
+          typeof msg.data === "number" ? (msg.data as number) : null;
+        this.syncCurrentAudioStreamIndex();
       } else if (msg.name === "time-pos") {
         this.currentTimePos = (msg.data as number) || 0;
         if (
@@ -1155,9 +1163,10 @@ class MpvIpcClient implements MpvClient {
         this.currentVideoPath = (msg.data as string) || "";
         updateCurrentMediaPath(msg.data);
         this.autoLoadSecondarySubTrack();
+        this.syncCurrentAudioStreamIndex();
       }
     } else if (msg.data !== undefined && msg.request_id) {
-      if (msg.request_id === MPV_REQUEST_ID_TRACK_LIST) {
+      if (msg.request_id === MPV_REQUEST_ID_TRACK_LIST_SECONDARY) {
         const tracks = msg.data as Array<{
           type: string;
           lang?: string;
@@ -1178,6 +1187,15 @@ class MpvIpcClient implements MpvClient {
             }
           }
         }
+      } else if (msg.request_id === MPV_REQUEST_ID_TRACK_LIST_AUDIO) {
+        this.updateCurrentAudioStreamIndex(
+          msg.data as Array<{
+            type?: string;
+            id?: number;
+            selected?: boolean;
+            "ff-index"?: number;
+          }>,
+        );
       } else if (msg.request_id === MPV_REQUEST_ID_SUBTEXT) {
         currentSubText = (msg.data as string) || "";
         if (mpvClient) {
@@ -1191,6 +1209,10 @@ class MpvIpcClient implements MpvClient {
         }
       } else if (msg.request_id === MPV_REQUEST_ID_PATH) {
         updateCurrentMediaPath(msg.data);
+      } else if (msg.request_id === MPV_REQUEST_ID_AID) {
+        this.currentAudioTrackId =
+          typeof msg.data === "number" ? (msg.data as number) : null;
+        this.syncCurrentAudioStreamIndex();
       } else if (msg.request_id === MPV_REQUEST_ID_SECONDARY_SUBTEXT) {
         this.currentSecondarySubText = (msg.data as string) || "";
         if (mainWindow && !mainWindow.isDestroyed()) {
@@ -1218,9 +1240,41 @@ class MpvIpcClient implements MpvClient {
     setTimeout(() => {
       this.send({
         command: ["get_property", "track-list"],
-        request_id: MPV_REQUEST_ID_TRACK_LIST,
+        request_id: MPV_REQUEST_ID_TRACK_LIST_SECONDARY,
       });
     }, 500);
+  }
+
+  private syncCurrentAudioStreamIndex(): void {
+    this.send({
+      command: ["get_property", "track-list"],
+      request_id: MPV_REQUEST_ID_TRACK_LIST_AUDIO,
+    });
+  }
+
+  private updateCurrentAudioStreamIndex(
+    tracks: Array<{
+      type?: string;
+      id?: number;
+      selected?: boolean;
+      "ff-index"?: number;
+    }>,
+  ): void {
+    if (!Array.isArray(tracks)) {
+      this.currentAudioStreamIndex = null;
+      return;
+    }
+
+    const audioTracks = tracks.filter((track) => track.type === "audio");
+    const activeTrack =
+      audioTracks.find((track) => track.id === this.currentAudioTrackId) ||
+      audioTracks.find((track) => track.selected === true);
+
+    const ffIndex = activeTrack?.["ff-index"];
+    this.currentAudioStreamIndex =
+      typeof ffIndex === "number" && Number.isInteger(ffIndex) && ffIndex >= 0
+        ? ffIndex
+        : null;
   }
 
   send(command: { command: unknown[]; request_id?: number }): boolean {
@@ -1239,6 +1293,7 @@ class MpvIpcClient implements MpvClient {
     this.send({ command: ["observe_property", 4, "sub-end"] });
     this.send({ command: ["observe_property", 5, "time-pos"] });
     this.send({ command: ["observe_property", 6, "secondary-sub-text"] });
+    this.send({ command: ["observe_property", 7, "aid"] });
   }
 
   private getInitialState(): void {
@@ -1253,6 +1308,10 @@ class MpvIpcClient implements MpvClient {
     this.send({
       command: ["get_property", "secondary-sub-text"],
       request_id: MPV_REQUEST_ID_SECONDARY_SUBTEXT,
+    });
+    this.send({
+      command: ["get_property", "aid"],
+      request_id: MPV_REQUEST_ID_AID,
     });
   }
 

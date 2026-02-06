@@ -491,8 +491,8 @@ See `config.example.jsonc` for detailed configuration options with all available
 | `notificationType`          | `"osd"`, `"system"`, `"both"`, `"none"` | Notification type on card update (default: `"osd"`)                                                                         |
 | `autoUpdateNewCards`        | `true`, `false`                         | Automatically update cards on creation (default: `true`)                                                                    |
 | `maxMediaDuration`          | number (seconds)                        | Max duration for generated media from multi-line copy (default: `30`, `0` to disable)                                       |
-| `isLapis`                   | object / `true` / `false`               | Lapis profile config. Object form: `{ enabled, sentenceCardModel, sentenceCardSentenceField, sentenceCardAudioField }` |
-| `isKiku`                    | object / `true` / `false`               | Kiku profile config. Object form: `{ enabled, sentenceCardModel, sentenceCardSentenceField, sentenceCardAudioField, fieldGrouping }` |
+| `isLapis`                   | object                                  | Lapis profile config: `{ enabled, sentenceCardModel, sentenceCardSentenceField, sentenceCardAudioField }` |
+| `isKiku`                    | object                                  | Kiku profile config: `{ enabled, sentenceCardModel, sentenceCardSentenceField, sentenceCardAudioField, fieldGrouping }` |
 
 **Kiku / Lapis Note Type Support:**
 

@@ -114,15 +114,12 @@ export class AnkiIntegration {
     sentenceCardAudioField?: string;
   } {
     const lapis = this.config.isLapis;
-    if (typeof lapis === "object" && lapis !== null) {
-      return {
-        enabled: lapis.enabled === true,
-        sentenceCardModel: lapis.sentenceCardModel,
-        sentenceCardSentenceField: lapis.sentenceCardSentenceField,
-        sentenceCardAudioField: lapis.sentenceCardAudioField,
-      };
-    }
-    return { enabled: lapis === true };
+    return {
+      enabled: lapis?.enabled === true,
+      sentenceCardModel: lapis?.sentenceCardModel,
+      sentenceCardSentenceField: lapis?.sentenceCardSentenceField,
+      sentenceCardAudioField: lapis?.sentenceCardAudioField,
+    };
   }
 
   private getKikuConfig(): {
@@ -133,16 +130,13 @@ export class AnkiIntegration {
     fieldGrouping?: "auto" | "manual" | "disabled";
   } {
     const kiku = this.config.isKiku;
-    if (typeof kiku === "object" && kiku !== null) {
-      return {
-        enabled: kiku.enabled === true,
-        sentenceCardModel: kiku.sentenceCardModel,
-        sentenceCardSentenceField: kiku.sentenceCardSentenceField,
-        sentenceCardAudioField: kiku.sentenceCardAudioField,
-        fieldGrouping: kiku.fieldGrouping,
-      };
-    }
-    return { enabled: kiku === true };
+    return {
+      enabled: kiku?.enabled === true,
+      sentenceCardModel: kiku?.sentenceCardModel,
+      sentenceCardSentenceField: kiku?.sentenceCardSentenceField,
+      sentenceCardAudioField: kiku?.sentenceCardAudioField,
+      fieldGrouping: kiku?.fieldGrouping,
+    };
   }
 
   private getEffectiveSentenceCardConfig(): {
@@ -158,26 +152,21 @@ export class AnkiIntegration {
     const preferKiku = kiku.enabled;
 
     return {
-      model:
-        (preferKiku ? kiku.sentenceCardModel : lapis.sentenceCardModel) ||
-        this.config.sentenceCardModel,
+      model: preferKiku ? kiku.sentenceCardModel : lapis.sentenceCardModel,
       sentenceField:
         (preferKiku
           ? kiku.sentenceCardSentenceField
-          : lapis.sentenceCardSentenceField) ||
-        this.config.sentenceCardSentenceField ||
-        "Sentence",
+          : lapis.sentenceCardSentenceField) || "Sentence",
       audioField:
-        (preferKiku ? kiku.sentenceCardAudioField : lapis.sentenceCardAudioField) ||
-        this.config.sentenceCardAudioField ||
-        "SentenceAudio",
+        (preferKiku
+          ? kiku.sentenceCardAudioField
+          : lapis.sentenceCardAudioField) || "SentenceAudio",
       lapisEnabled: lapis.enabled,
       kikuEnabled: kiku.enabled,
-      kikuFieldGrouping:
-        (kiku.fieldGrouping || this.config.kikuFieldGrouping || "disabled") as
-          | "auto"
-          | "manual"
-          | "disabled",
+      kikuFieldGrouping: (kiku.fieldGrouping || "disabled") as
+        | "auto"
+        | "manual"
+        | "disabled",
     };
   }
 
@@ -475,6 +464,7 @@ export class AnkiIntegration {
       startTime,
       endTime,
       this.config.audioPadding,
+      this.mpvClient.currentAudioStreamIndex,
     );
   }
 
@@ -833,6 +823,7 @@ export class AnkiIntegration {
               rangeStart,
               rangeEnd,
               this.config.audioPadding,
+              this.mpvClient.currentAudioStreamIndex,
             );
 
             if (audioBuffer) {
@@ -1026,6 +1017,7 @@ export class AnkiIntegration {
             startTime,
             endTime,
             this.config.audioPadding,
+            this.mpvClient.currentAudioStreamIndex,
           );
 
           if (audioBuffer) {
@@ -1220,6 +1212,7 @@ export class AnkiIntegration {
         startTime,
         endTime,
         this.config.audioPadding,
+        this.mpvClient.currentAudioStreamIndex,
       );
 
       if (audioBuffer) {

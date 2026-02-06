@@ -99,6 +99,7 @@ export interface MpvClient {
   currentTimePos: number;
   currentSubStart: number;
   currentSubEnd: number;
+  currentAudioStreamIndex: number | null;
   send(command: { command: unknown[]; request_id?: number }): boolean;
 }
 
@@ -147,28 +148,19 @@ export interface AnkiConnectConfig {
   animatedCrf?: number;
   autoUpdateNewCards?: boolean;
   maxMediaDuration?: number;
-  // Legacy flat options (kept for backward compatibility)
-  sentenceCardModel?: string;
-  sentenceCardSentenceField?: string;
-  sentenceCardAudioField?: string;
-  kikuFieldGrouping?: "auto" | "manual" | "disabled";
-  isLapis?:
-    | boolean
-    | {
-        enabled?: boolean;
-        sentenceCardModel?: string;
-        sentenceCardSentenceField?: string;
-        sentenceCardAudioField?: string;
-      };
-  isKiku?:
-    | boolean
-    | {
-        enabled?: boolean;
-        sentenceCardModel?: string;
-        sentenceCardSentenceField?: string;
-        sentenceCardAudioField?: string;
-        fieldGrouping?: "auto" | "manual" | "disabled";
-      };
+  isLapis?: {
+    enabled?: boolean;
+    sentenceCardModel?: string;
+    sentenceCardSentenceField?: string;
+    sentenceCardAudioField?: string;
+  };
+  isKiku?: {
+    enabled?: boolean;
+    sentenceCardModel?: string;
+    sentenceCardSentenceField?: string;
+    sentenceCardAudioField?: string;
+    fieldGrouping?: "auto" | "manual" | "disabled";
+  };
 }
 
 export interface SubtitleStyleConfig {

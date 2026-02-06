@@ -103,32 +103,45 @@ export class MediaGenerator {
     startTime: number,
     endTime: number,
     padding: number = 0.5,
+    audioStreamIndex: number | null = null,
   ): Promise<Buffer> {
     const start = Math.max(0, startTime - padding);
     const duration = endTime - startTime + 2 * padding;
 
     return new Promise((resolve, reject) => {
       const outputPath = path.join(this.tempDir, `audio_${Date.now()}.mp3`);
+      const args: string[] = [
+        "-ss",
+        start.toString(),
+        "-t",
+        duration.toString(),
+        "-i",
+        videoPath,
+      ];
+
+      if (
+        typeof audioStreamIndex === "number" &&
+        Number.isInteger(audioStreamIndex) &&
+        audioStreamIndex >= 0
+      ) {
+        args.push("-map", `0:${audioStreamIndex}`);
+      }
+
+      args.push(
+        "-vn",
+        "-acodec",
+        "libmp3lame",
+        "-q:a",
+        "2",
+        "-ar",
+        "44100",
+        "-y",
+        outputPath,
+      );
 
       execFile(
         "ffmpeg",
-        [
-          "-ss",
-          start.toString(),
-          "-t",
-          duration.toString(),
-          "-i",
-          videoPath,
-          "-vn",
-          "-acodec",
-          "libmp3lame",
-          "-q:a",
-          "2",
-          "-ar",
-          "44100",
-          "-y",
-          outputPath,
-        ],
+        args,
         { timeout: 30000 },
         (error) => {
           if (error) {
