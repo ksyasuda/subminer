@@ -19,7 +19,7 @@
 import { AnkiConnectClient } from "./anki-connect";
 import { SubtitleTimingTracker } from "./subtitle-timing-tracker";
 import { MediaGenerator } from "./media-generator";
-import { AnkiConnectConfig, MpvClient } from "./types";
+import { AnkiConnectConfig, MpvClient, NotificationOptions } from "./types";
 
 interface NoteInfo {
   noteId: number;
@@ -39,8 +39,9 @@ export class AnkiIntegration {
   private nextPollTime = 0;
   private mpvClient: MpvClient;
   private osdCallback: ((text: string) => void) | null = null;
-  private notificationCallback: ((title: string, options: any) => void) | null =
-    null;
+  private notificationCallback:
+    | ((title: string, options: NotificationOptions) => void)
+    | null = null;
   private updateInProgress = false;
 
   constructor(
@@ -48,7 +49,10 @@ export class AnkiIntegration {
     timingTracker: SubtitleTimingTracker,
     mpvClient: MpvClient,
     osdCallback?: (text: string) => void,
-    notificationCallback?: (title: string, options: any) => void,
+    notificationCallback?: (
+      title: string,
+      options: NotificationOptions,
+    ) => void,
   ) {
     this.config = {
       url: "http://127.0.0.1:8765",

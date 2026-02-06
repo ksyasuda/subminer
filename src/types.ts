@@ -88,6 +88,11 @@ export interface TexthookerConfig {
   openBrowser?: boolean;
 }
 
+export interface NotificationOptions {
+  body?: string;
+  icon?: string;
+}
+
 export interface MpvClient {
   currentSubText: string;
   currentVideoPath: string;
@@ -278,9 +283,15 @@ export interface ElectronAPI {
   sendMpvCommand: (command: (string | number)[]) => void;
   getKeybindings: () => Promise<Keybinding[]>;
   getJimakuMediaInfo: () => Promise<JimakuMediaInfo>;
-  jimakuSearchEntries: (query: JimakuSearchQuery) => Promise<JimakuApiResponse<JimakuEntry[]>>;
-  jimakuListFiles: (query: JimakuFilesQuery) => Promise<JimakuApiResponse<JimakuFileEntry[]>>;
-  jimakuDownloadFile: (query: JimakuDownloadQuery) => Promise<JimakuDownloadResult>;
+  jimakuSearchEntries: (
+    query: JimakuSearchQuery,
+  ) => Promise<JimakuApiResponse<JimakuEntry[]>>;
+  jimakuListFiles: (
+    query: JimakuFilesQuery,
+  ) => Promise<JimakuApiResponse<JimakuFileEntry[]>>;
+  jimakuDownloadFile: (
+    query: JimakuDownloadQuery,
+  ) => Promise<JimakuDownloadResult>;
   quitApp: () => void;
   toggleDevTools: () => void;
   toggleOverlay: () => void;

@@ -70,11 +70,14 @@ export class AnkiConnectClient {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  private isRetryableError(error: any): boolean {
-    if (!error) return false;
+  private isRetryableError(error: unknown): boolean {
+    if (!error || typeof error !== "object") return false;
 
-    const code = error.code;
-    const message = error.message?.toLowerCase() || "";
+    const code = (error as Record<string, unknown>).code;
+    const message =
+      typeof (error as Record<string, unknown>).message === "string"
+        ? ((error as Record<string, unknown>).message as string).toLowerCase()
+        : "";
 
     return (
       code === "ECONNRESET" ||
