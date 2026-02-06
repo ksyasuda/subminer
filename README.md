@@ -25,6 +25,7 @@ An all-in-one sentence mining overlay for MPV with AnkiConnect and dictionary (Y
 ## Requirements
 
 ### Linux
+
 - **Wayland/X11 compositor** (one of the following):
   - Hyprland (uses `hyprctl`)
   - Sway (uses `swaymsg`)
@@ -34,6 +35,7 @@ An all-in-one sentence mining overlay for MPV with AnkiConnect and dictionary (Y
 - fuse2 (for AppImage support)
 
 ### macOS
+
 - macOS 10.13 or later
 - mpv (with IPC socket support)
 - mecab and mecab-ipadic (Japanese morphological analyzer) - optional
@@ -89,6 +91,7 @@ You can launch `SubMiner.app` directly (double-click or `open -a SubMiner`). The
 **Accessibility Permission:**
 
 After launching the app for the first time, grant accessibility permission:
+
 1. Open **System Preferences** → **Security & Privacy** → **Privacy** tab
 2. Select **Accessibility** from the left sidebar
 3. Add SubMiner to the list
@@ -125,11 +128,12 @@ mpv --input-ipc-server=/tmp/subminer-socket video.mkv
 
 **Config Location:**
 
-Settings are stored in `~/.config/subminer/config.json` (same as Linux).
+Settings are stored in `~/.config/SubMiner/config.jsonc` (same as Linux).
 
 **MeCab Installation Paths:**
 
 Common Homebrew install paths:
+
 - Apple Silicon (M1/M2): `/opt/homebrew/bin/mecab`
 - Intel: `/usr/local/bin/mecab`
 
@@ -313,8 +317,8 @@ These keybindings only work when the overlay window has focus. See [Configuratio
 
 ### Overlay Chord Shortcuts
 
-| Chord | Action |
-| ----- | ------ |
+| Chord     | Action                    |
+| --------- | ------------------------- |
 | `y` → `j` | Open Jimaku subtitle menu |
 
 ## How It Works
@@ -328,7 +332,7 @@ These keybindings only work when the overlay window has focus. See [Configuratio
 
 ## Configuration
 
-Settings are stored in `~/.config/subminer/config.json`
+Settings are stored in `~/.config/SubMiner/config.jsonc`
 
 ### Configuration File
 

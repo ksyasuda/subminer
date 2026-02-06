@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { execFile } from "child_process";
+import { ExecFileException, execFile } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
@@ -58,7 +58,10 @@ export class MediaGenerator {
             fs.unlinkSync(filePath);
           }
         } catch (err) {
-          // Ignore individual file cleanup errors
+          console.debug(
+            `Failed to clean up ${filePath}:`,
+            (err as Error).message,
+          );
         }
       }
     } catch (err) {
@@ -84,6 +87,15 @@ export class MediaGenerator {
         fs.unlinkSync(filePath);
       } catch {}
     }, delayMs);
+  }
+
+  private ffmpegError(label: string, error: ExecFileException): Error {
+    if (error.code === "ENOENT") {
+      return new Error(
+        "FFmpeg not found. Install FFmpeg to enable media generation.",
+      );
+    }
+    return new Error(`FFmpeg ${label} failed: ${error.message}`);
   }
 
   async generateAudio(
@@ -120,9 +132,7 @@ export class MediaGenerator {
         { timeout: 30000 },
         (error) => {
           if (error) {
-            reject(
-              new Error(`FFmpeg audio generation failed: ${error.message}`),
-            );
+            reject(this.ffmpegError("audio generation", error));
             return;
           }
 
@@ -202,9 +212,7 @@ export class MediaGenerator {
 
       execFile("ffmpeg", args, { timeout: 30000 }, (error) => {
         if (error) {
-          reject(
-            new Error(`FFmpeg screenshot generation failed: ${error.message}`),
-          );
+          reject(this.ffmpegError("screenshot generation", error));
           return;
         }
 
@@ -253,11 +261,7 @@ export class MediaGenerator {
         { timeout: 30000 },
         (error) => {
           if (error) {
-            reject(
-              new Error(
-                `FFmpeg notification icon generation failed: ${error.message}`,
-              ),
-            );
+            reject(this.ffmpegError("notification icon generation", error));
             return;
           }
 
@@ -335,9 +339,7 @@ export class MediaGenerator {
         { timeout: 60000 },
         (error) => {
           if (error) {
-            reject(
-              new Error(`FFmpeg animation generation failed: ${error.message}`),
-            );
+            reject(this.ffmpegError("animation generation", error));
             return;
           }
 

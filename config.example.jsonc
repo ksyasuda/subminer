@@ -1,7 +1,7 @@
 /**
  * SubMiner Example Configuration File
  *
- * Copy this file to: ~/.config/subminer/config.json
+ * Copy this file to: ~/.config/SubMiner/config.jsonc
  * (Remove the comments if your JSON parser doesn't support JSONC)
  *
  * This file shows all available configuration options with their default values.
