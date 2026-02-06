@@ -1,6 +1,6 @@
 {
   "name": "subminer",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "All-in-one sentence mining overlay with AnkiConnect and dictionary integration",
   "main": "dist/main.js",
   "scripts": {
