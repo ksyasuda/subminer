@@ -46,7 +46,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: appimage
-          path: dist/*.AppImage
+          path: release/*.AppImage
 
   release:
     needs: build
@@ -61,7 +61,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: appimage
-          path: dist
+          path: release
 
       - name: Get version from tag
         id: version
@@ -103,7 +103,7 @@ jobs:
             ### Manual Installation
             See the [README](https://github.com/${{ github.repository }}#installation) for manual installation instructions.
           files: |
-            dist/*.AppImage
+            release/*.AppImage
             subminer
           draft: false
           prerelease: false
