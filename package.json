@@ -10,8 +10,9 @@
     "stop": "electron . --stop",
     "toggle": "electron . --toggle",
     "build:appimage": "pnpm run build && electron-builder --linux AppImage",
-    "build:mac": "CSC_IDENTITY_AUTO_DISCOVERY=false pnpm run build && electron-builder --mac",
-    "build:mac:zip": "CSC_IDENTITY_AUTO_DISCOVERY=false pnpm run build && electron-builder --mac zip"
+    "build:mac": "pnpm run build && electron-builder --mac dmg zip",
+    "build:mac:unsigned": "CSC_IDENTITY_AUTO_DISCOVERY=false pnpm run build && electron-builder --mac dmg zip",
+    "build:mac:zip": "pnpm run build && electron-builder --mac zip"
   },
   "keywords": [
     "anki",
@@ -54,11 +55,14 @@
     },
     "mac": {
       "target": [
+        "dmg",
         "zip"
       ],
       "category": "public.app-category.video",
       "icon": "assets/subminer.png",
-      "identity": null
+      "hardenedRuntime": true,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     },
     "files": [
       "dist/**/*",

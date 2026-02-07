@@ -1,4 +1,4 @@
-.PHONY: help deps build build-linux build-macos build-appimage install install-linux install-macos uninstall uninstall-linux uninstall-macos print-dirs
+.PHONY: help deps build build-linux build-macos build-appimage build-dmg build-dmg-unsigned install install-linux install-macos uninstall uninstall-linux uninstall-macos print-dirs
 
 APP_NAME := subminer
 THEME_FILE := subminer.rasi
@@ -25,6 +25,8 @@ help:
 		"  build            Build app JS + texthooker-ui" \
 		"  build-linux       Build Linux AppImage" \
 		"  build-macos       Build app JS + texthooker-ui (no packaging)" \
+		"  build-dmg         Build macOS package (signed/notarized if configured)" \
+		"  build-dmg-unsigned Build macOS package without signing/notarization" \
 		"  install-linux     Install wrapper + theme (and AppImage if present)" \
 		"  install-macos     Install wrapper + theme" \
 		"  uninstall-linux   Remove installed wrapper/theme" \
@@ -57,8 +59,21 @@ build:
 
 build-macos: build
 
+build-dmg:
+	@command -v pnpm >/dev/null 2>&1 || { printf '%s\n' "[ERROR] pnpm not found"; exit 1; }
+	@pnpm -C vendor/texthooker-ui install
+	@pnpm -C vendor/texthooker-ui build
+	@pnpm run build:mac
+
+build-dmg-unsigned:
+	@command -v pnpm >/dev/null 2>&1 || { printf '%s\n' "[ERROR] pnpm not found"; exit 1; }
+	@pnpm -C vendor/texthooker-ui install
+	@pnpm -C vendor/texthooker-ui build
+	@pnpm run build:mac:unsigned
+
 build-appimage:
 	@command -v pnpm >/dev/null 2>&1 || { printf '%s\n' "[ERROR] pnpm not found"; exit 1; }
+	@pnpm -C vendor/texthooker-ui install
 	@pnpm -C vendor/texthooker-ui build
 	@pnpm run build:appimage
 

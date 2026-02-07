@@ -64,7 +64,8 @@ chmod +x ~/.local/bin/subminer
 
 ### macOS Installation
 
-If you download a release, use the **ZIP** artifact. Unzip it and drag `SubMiner.app` into `/Applications`.
+If you download a release, use the **DMG** artifact. Open it and drag `SubMiner.app` into `/Applications`.
+If needed, you can use the **ZIP** artifact as a fallback by unzipping and dragging `SubMiner.app` into `/Applications`.
 
 Install dependencies using Homebrew:
 
@@ -82,7 +83,13 @@ cd vendor/texthooker-ui && pnpm install && pnpm build && cd ../..
 pnpm run build:mac
 ```
 
-The built app will be available in the `release` directory (ZIP on macOS).
+The built app will be available in the `release` directory (`.dmg` and `.zip` on macOS).
+
+If you are building locally without Apple signing credentials, use:
+
+```bash
+pnpm run build:mac:unsigned
+```
 
 You can launch `SubMiner.app` directly (double-click or `open -a SubMiner`). The app no longer requires a `--start` argument on macOS.
 
@@ -94,6 +101,17 @@ After launching the app for the first time, grant accessibility permission:
 3. Add SubMiner to the list
 
 Without this permission, window tracking will not work and the overlay won't follow the MPV window.
+
+### Maintainer: macOS Release Signing/Notarization
+
+The GitHub release workflow builds signed and notarized macOS artifacts on `macos-latest`.
+Set these GitHub Actions secrets before creating a release tag:
+
+- `CSC_LINK` (base64 `.p12` certificate or file URL for Developer ID Application cert)
+- `CSC_KEY_PASSWORD` (password for the `.p12`)
+- `APPLE_ID` (Apple ID email)
+- `APPLE_APP_SPECIFIC_PASSWORD` (app-specific password for notarization)
+- `APPLE_TEAM_ID` (Apple Developer Team ID)
 
 ### From Source (Linux/Development)
 

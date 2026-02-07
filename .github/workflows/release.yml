@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -48,8 +48,74 @@ jobs:
           name: appimage
           path: release/*.AppImage
 
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Validate macOS signing/notarization secrets
+        run: |
+          missing=0
+          for name in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID; do
+            if [ -z "${!name}" ]; then
+              echo "Missing required secret: $name"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "Set all required macOS signing/notarization secrets and rerun."
+            exit 1
+          fi
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build texthooker-ui
+        run: |
+          cd vendor/texthooker-ui
+          pnpm install
+          pnpm build
+
+      - name: Build signed + notarized macOS artifacts
+        run: pnpm run build:mac
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: |
+            release/*.dmg
+            release/*.zip
+
   release:
-    needs: build
+    needs: [build-linux, build-macos]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -61,6 +127,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: appimage
+          path: release
+
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos
           path: release
 
       - name: Get version from tag
@@ -100,10 +172,17 @@ jobs:
             2. Make it executable: `chmod +x subminer-*.AppImage`
             3. Run: `./subminer-*.AppImage`
 
+            ### macOS
+            1. Download `subminer-*.dmg`
+            2. Open the DMG and drag `SubMiner.app` into `/Applications`
+            3. If needed, use the ZIP artifact as an alternative
+
             ### Manual Installation
             See the [README](https://github.com/${{ github.repository }}#installation) for manual installation instructions.
           files: |
             release/*.AppImage
+            release/*.dmg
+            release/*.zip
             subminer
           draft: false
           prerelease: false
