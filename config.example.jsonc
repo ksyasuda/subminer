@@ -1,13 +1,22 @@
 /**
  * SubMiner Example Configuration File
  *
- * Copy this file to: ~/.config/subminer/config.json
+ * Copy this file to: ~/.config/SubMiner/config.jsonc
  * (Remove the comments if your JSON parser doesn't support JSONC)
  *
  * This file shows all available configuration options with their default values.
  * Only include the options you want to customize - unspecified options use defaults.
  */
 {
+  // ==========================================
+  // Overlay Auto-Start
+  // ==========================================
+  // When the overlay process connects to mpv, automatically show the overlay
+  // and hide mpv's native subtitles. This can also be set via the Lua plugin's
+  // auto_start_overlay option, which passes --auto-start-overlay on the CLI.
+  // Either setting being true will enable auto-start.
+  "auto_start_overlay": false,
+
   // ==========================================
   // Texthooker Server
   // ==========================================
@@ -82,7 +91,7 @@
     "mediaInsertMode": "append", // "append" | "prepend" (when overwrite is false)
 
     // Metadata field
-    "miscInfoField": "Info", // optional, null to disable
+    "miscInfoField": "MiscInfo", // optional, null to disable
     "miscInfoPattern": "[SubMiner] %f (%t)", // %f=filename, %F=filename+ext, %t=time
 
     // UI options
@@ -90,16 +99,32 @@
     "notificationType": "osd", // "osd" | "system" | "both" | "none"
 
     // Card update behavior
-    "autoUpdateNewCards": true, // false = use manual shortcuts instead
+    "autoUpdateNewCards": false, // false = use manual shortcuts instead
     "maxMediaDuration": 30, // 0 to disable limit
 
-    // Sentence card mining
-    "sentenceCardModel": "Japanese sentences",
-    "sentenceCardSentenceField": "Sentence",
-    "sentenceCardAudioField": "SentenceAudio",
+    // Lapis note format config
+    "isLapis": {
+      "enabled": false,
+      "sentenceCardModel": "Japanese sentences",
+      "sentenceCardSentenceField": "Sentence",
+      "sentenceCardAudioField": "SentenceAudio",
+    },
 
-    // Lapis note format compatibility
-    "isLapis": false,
+    // Kiku note format config (extends Lapis)
+    // Both isKiku.enabled and isLapis.enabled can be true; Kiku takes precedence
+    // sentenceCardModel/sentenceCardSentenceField/sentenceCardAudioField are inherited from isLapis
+    "isKiku": {
+      "enabled": false,
+
+      // Kiku field grouping for duplicate cards:
+      // "auto" = automatically merge duplicates into one card
+      // "manual" = show popup to choose which card to keep
+      // "disabled" = no field grouping
+      "fieldGrouping": "disabled",
+
+      // Auto mode only: whether to delete the duplicate card after merge
+      "deleteDuplicateInAuto": true,
+    },
   },
 
   // ==========================================
@@ -117,6 +142,10 @@
     // Update last added card from clipboard
     "updateLastCardFromClipboard": "CommandOrControl+V",
 
+    // Trigger Kiku duplicate field grouping for last added card
+    // Only active when ankiConnect.autoUpdateNewCards is false
+    "triggerFieldGrouping": "CommandOrControl+G",
+
     // Create sentence card from current subtitle
     "mineSentence": "CommandOrControl+S",
 
@@ -125,6 +154,9 @@
 
     // Cycle secondary subtitle display mode
     "toggleSecondarySub": "CommandOrControl+Shift+V",
+
+    // Mark last added card as audio card
+    "markAudioCard": "CommandOrControl+Shift+A",
 
     // Timeout in ms for multi-copy/mine digit input
     "multiCopyTimeoutMs": 3000,

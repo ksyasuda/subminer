@@ -88,6 +88,55 @@ export interface TexthookerConfig {
   openBrowser?: boolean;
 }
 
+export interface NotificationOptions {
+  body?: string;
+  icon?: string;
+}
+
+export interface MpvClient {
+  currentSubText: string;
+  currentVideoPath: string;
+  currentTimePos: number;
+  currentSubStart: number;
+  currentSubEnd: number;
+  currentAudioStreamIndex: number | null;
+  send(command: { command: unknown[]; request_id?: number }): boolean;
+}
+
+export interface KikuDuplicateCardInfo {
+  noteId: number;
+  expression: string;
+  sentencePreview: string;
+  hasAudio: boolean;
+  hasImage: boolean;
+  isOriginal: boolean;
+}
+
+export interface KikuFieldGroupingRequestData {
+  original: KikuDuplicateCardInfo;
+  duplicate: KikuDuplicateCardInfo;
+}
+
+export interface KikuFieldGroupingChoice {
+  keepNoteId: number;
+  deleteNoteId: number;
+  deleteDuplicate: boolean;
+  cancelled: boolean;
+}
+
+export interface KikuMergePreviewRequest {
+  keepNoteId: number;
+  deleteNoteId: number;
+  deleteDuplicate: boolean;
+}
+
+export interface KikuMergePreviewResponse {
+  ok: boolean;
+  compact?: Record<string, unknown>;
+  full?: Record<string, unknown>;
+  error?: string;
+}
+
 export interface AnkiConnectConfig {
   enabled?: boolean;
   url?: string;
@@ -118,10 +167,17 @@ export interface AnkiConnectConfig {
   animatedCrf?: number;
   autoUpdateNewCards?: boolean;
   maxMediaDuration?: number;
-  sentenceCardModel?: string;
-  sentenceCardSentenceField?: string;
-  sentenceCardAudioField?: string;
-  isLapis?: boolean;
+  isLapis?: {
+    enabled?: boolean;
+    sentenceCardModel?: string;
+    sentenceCardSentenceField?: string;
+    sentenceCardAudioField?: string;
+  };
+  isKiku?: {
+    enabled?: boolean;
+    fieldGrouping?: "auto" | "manual" | "disabled";
+    deleteDuplicateInAuto?: boolean;
+  };
 }
 
 export interface SubtitleStyleConfig {
@@ -145,10 +201,12 @@ export interface ShortcutsConfig {
   copySubtitle?: string | null;
   copySubtitleMultiple?: string | null;
   updateLastCardFromClipboard?: string | null;
+  triggerFieldGrouping?: string | null;
   mineSentence?: string | null;
   mineSentenceMultiple?: string | null;
   multiCopyTimeoutMs?: number;
   toggleSecondarySub?: string | null;
+  markAudioCard?: string | null;
 }
 
 export type JimakuLanguagePreference = "ja" | "en" | "none";
@@ -163,7 +221,6 @@ export interface JimakuConfig {
 
 export interface Config {
   subtitlePosition?: SubtitlePosition;
-  subtitleFontSize?: number;
   keybindings?: Keybinding[];
   websocket?: WebSocketConfig;
   texthooker?: TexthookerConfig;
@@ -253,7 +310,9 @@ export type JimakuDownloadResult =
 export interface ElectronAPI {
   onSubtitle: (callback: (data: SubtitleData) => void) => void;
   onVisibility: (callback: (visible: boolean) => void) => void;
-  onSubtitlePosition: (callback: (position: SubtitlePosition | null) => void) => void;
+  onSubtitlePosition: (
+    callback: (position: SubtitlePosition | null) => void,
+  ) => void;
   getOverlayVisibility: () => Promise<boolean>;
   getCurrentSubtitle: () => Promise<SubtitleData>;
   setIgnoreMouseEvents: (
@@ -268,9 +327,15 @@ export interface ElectronAPI {
   sendMpvCommand: (command: (string | number)[]) => void;
   getKeybindings: () => Promise<Keybinding[]>;
   getJimakuMediaInfo: () => Promise<JimakuMediaInfo>;
-  jimakuSearchEntries: (query: JimakuSearchQuery) => Promise<JimakuApiResponse<JimakuEntry[]>>;
-  jimakuListFiles: (query: JimakuFilesQuery) => Promise<JimakuApiResponse<JimakuFileEntry[]>>;
-  jimakuDownloadFile: (query: JimakuDownloadQuery) => Promise<JimakuDownloadResult>;
+  jimakuSearchEntries: (
+    query: JimakuSearchQuery,
+  ) => Promise<JimakuApiResponse<JimakuEntry[]>>;
+  jimakuListFiles: (
+    query: JimakuFilesQuery,
+  ) => Promise<JimakuApiResponse<JimakuFileEntry[]>>;
+  jimakuDownloadFile: (
+    query: JimakuDownloadQuery,
+  ) => Promise<JimakuDownloadResult>;
   quitApp: () => void;
   toggleDevTools: () => void;
   toggleOverlay: () => void;
@@ -282,6 +347,13 @@ export interface ElectronAPI {
   getSecondarySubMode: () => Promise<SecondarySubMode>;
   getCurrentSecondarySub: () => Promise<string>;
   getSubtitleStyle: () => Promise<SubtitleStyleConfig | null>;
+  onKikuFieldGroupingRequest: (
+    callback: (data: KikuFieldGroupingRequestData) => void,
+  ) => void;
+  kikuBuildMergePreview: (
+    request: KikuMergePreviewRequest,
+  ) => Promise<KikuMergePreviewResponse>;
+  kikuFieldGroupingRespond: (choice: KikuFieldGroupingChoice) => void;
 }
 
 declare global {

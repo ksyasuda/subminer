@@ -108,6 +108,32 @@ type JimakuDownloadResult =
   | { ok: true; path: string }
   | { ok: false; error: JimakuApiError };
 
+interface KikuDuplicateCardInfo {
+  noteId: number;
+  expression: string;
+  sentencePreview: string;
+  hasAudio: boolean;
+  hasImage: boolean;
+  isOriginal: boolean;
+}
+
+interface KikuFieldGroupingChoice {
+  keepNoteId: number;
+  deleteNoteId: number;
+  deleteDuplicate: boolean;
+  cancelled: boolean;
+}
+
+interface KikuMergePreviewResponse {
+  ok: boolean;
+  compact?: Record<string, unknown>;
+  full?: Record<string, unknown>;
+  error?: string;
+}
+
+type KikuModalStep = "select" | "preview";
+type KikuPreviewMode = "compact" | "full";
+
 const subtitleRoot = document.getElementById("subtitleRoot")!;
 const subtitleContainer = document.getElementById("subtitleContainer")!;
 const overlay = document.getElementById("overlay")!;
@@ -146,6 +172,67 @@ const jimakuBroadenButton = document.getElementById(
   "jimakuBroaden",
 ) as HTMLButtonElement;
 
+const kikuModal = document.getElementById(
+  "kikuFieldGroupingModal",
+) as HTMLDivElement;
+const kikuCard1 = document.getElementById("kikuCard1") as HTMLDivElement;
+const kikuCard2 = document.getElementById("kikuCard2") as HTMLDivElement;
+const kikuCard1Expression = document.getElementById(
+  "kikuCard1Expression",
+) as HTMLDivElement;
+const kikuCard2Expression = document.getElementById(
+  "kikuCard2Expression",
+) as HTMLDivElement;
+const kikuCard1Sentence = document.getElementById(
+  "kikuCard1Sentence",
+) as HTMLDivElement;
+const kikuCard2Sentence = document.getElementById(
+  "kikuCard2Sentence",
+) as HTMLDivElement;
+const kikuCard1Meta = document.getElementById(
+  "kikuCard1Meta",
+) as HTMLDivElement;
+const kikuCard2Meta = document.getElementById(
+  "kikuCard2Meta",
+) as HTMLDivElement;
+const kikuConfirmButton = document.getElementById(
+  "kikuConfirmButton",
+) as HTMLButtonElement;
+const kikuCancelButton = document.getElementById(
+  "kikuCancelButton",
+) as HTMLButtonElement;
+const kikuDeleteDuplicateCheckbox = document.getElementById(
+  "kikuDeleteDuplicate",
+) as HTMLInputElement;
+const kikuSelectionStep = document.getElementById(
+  "kikuSelectionStep",
+) as HTMLDivElement;
+const kikuPreviewStep = document.getElementById(
+  "kikuPreviewStep",
+) as HTMLDivElement;
+const kikuPreviewJson = document.getElementById(
+  "kikuPreviewJson",
+) as HTMLPreElement;
+const kikuPreviewCompactButton = document.getElementById(
+  "kikuPreviewCompact",
+) as HTMLButtonElement;
+const kikuPreviewFullButton = document.getElementById(
+  "kikuPreviewFull",
+) as HTMLButtonElement;
+const kikuPreviewError = document.getElementById(
+  "kikuPreviewError",
+) as HTMLDivElement;
+const kikuBackButton = document.getElementById(
+  "kikuBackButton",
+) as HTMLButtonElement;
+const kikuFinalConfirmButton = document.getElementById(
+  "kikuFinalConfirmButton",
+) as HTMLButtonElement;
+const kikuFinalCancelButton = document.getElementById(
+  "kikuFinalCancelButton",
+) as HTMLButtonElement;
+const kikuHint = document.getElementById("kikuHint") as HTMLDivElement;
+
 let isOverSubtitle = false;
 let isDragging = false;
 let dragStartY = 0;
@@ -157,6 +244,16 @@ let selectedEntryIndex = 0;
 let selectedFileIndex = 0;
 let currentEpisodeFilter: number | null = null;
 let currentEntryId: number | null = null;
+
+let kikuModalOpen = false;
+let kikuSelectedCard: 1 | 2 = 1;
+let kikuOriginalData: KikuDuplicateCardInfo | null = null;
+let kikuDuplicateData: KikuDuplicateCardInfo | null = null;
+let kikuModalStep: KikuModalStep = "select";
+let kikuPreviewMode: KikuPreviewMode = "compact";
+let kikuPendingChoice: KikuFieldGroupingChoice | null = null;
+let kikuPreviewCompactData: Record<string, unknown> | null = null;
+let kikuPreviewFullData: Record<string, unknown> | null = null;
 
 function normalizeSubtitle(text: string): string {
   if (!text) return "";
@@ -264,7 +361,7 @@ function handleMouseEnter(): void {
 function handleMouseLeave(): void {
   isOverSubtitle = false;
   const yomitanPopup = document.querySelector('iframe[id^="yomitan-popup"]');
-  if (!yomitanPopup && !jimakuModalOpen) {
+  if (!yomitanPopup && !jimakuModalOpen && !kikuModalOpen) {
     overlay.classList.remove("interactive");
   }
 }
@@ -376,6 +473,234 @@ function closeJimakuModal(): void {
     overlay.classList.remove("interactive");
   }
   resetJimakuLists();
+}
+
+function formatMediaMeta(card: KikuDuplicateCardInfo): string {
+  const parts: string[] = [];
+  parts.push(card.hasAudio ? "Audio: Yes" : "Audio: No");
+  parts.push(card.hasImage ? "Image: Yes" : "Image: No");
+  return parts.join(" | ");
+}
+
+function updateKikuCardSelection(): void {
+  kikuCard1.classList.toggle("active", kikuSelectedCard === 1);
+  kikuCard2.classList.toggle("active", kikuSelectedCard === 2);
+}
+
+function setKikuModalStep(step: KikuModalStep): void {
+  kikuModalStep = step;
+  const isSelect = step === "select";
+  kikuSelectionStep.classList.toggle("hidden", !isSelect);
+  kikuPreviewStep.classList.toggle("hidden", isSelect);
+  kikuHint.textContent = isSelect
+    ? "Press 1 or 2 to select · Enter to continue · Esc to cancel"
+    : "Enter to confirm merge · Backspace to go back · Esc to cancel";
+}
+
+function updateKikuPreviewToggle(): void {
+  kikuPreviewCompactButton.classList.toggle(
+    "active",
+    kikuPreviewMode === "compact",
+  );
+  kikuPreviewFullButton.classList.toggle("active", kikuPreviewMode === "full");
+}
+
+function renderKikuPreview(): void {
+  const payload =
+    kikuPreviewMode === "compact"
+      ? kikuPreviewCompactData
+      : kikuPreviewFullData;
+  kikuPreviewJson.textContent = payload
+    ? JSON.stringify(payload, null, 2)
+    : "{}";
+  updateKikuPreviewToggle();
+}
+
+function setKikuPreviewError(message: string | null): void {
+  if (!message) {
+    kikuPreviewError.textContent = "";
+    kikuPreviewError.classList.add("hidden");
+    return;
+  }
+  kikuPreviewError.textContent = message;
+  kikuPreviewError.classList.remove("hidden");
+}
+
+function openKikuFieldGroupingModal(data: {
+  original: KikuDuplicateCardInfo;
+  duplicate: KikuDuplicateCardInfo;
+}): void {
+  if (kikuModalOpen) return;
+  kikuModalOpen = true;
+  kikuOriginalData = data.original;
+  kikuDuplicateData = data.duplicate;
+  kikuSelectedCard = 1;
+
+  kikuCard1Expression.textContent = data.original.expression;
+  kikuCard1Sentence.textContent =
+    data.original.sentencePreview || "(no sentence)";
+  kikuCard1Meta.textContent = formatMediaMeta(data.original);
+
+  kikuCard2Expression.textContent = data.duplicate.expression;
+  kikuCard2Sentence.textContent =
+    data.duplicate.sentencePreview || "(current subtitle)";
+  kikuCard2Meta.textContent = formatMediaMeta(data.duplicate);
+  kikuDeleteDuplicateCheckbox.checked = true;
+  kikuPendingChoice = null;
+  kikuPreviewCompactData = null;
+  kikuPreviewFullData = null;
+  kikuPreviewMode = "compact";
+  renderKikuPreview();
+  setKikuPreviewError(null);
+  setKikuModalStep("select");
+
+  updateKikuCardSelection();
+
+  overlay.classList.add("interactive");
+  kikuModal.classList.remove("hidden");
+  kikuModal.setAttribute("aria-hidden", "false");
+}
+
+function closeKikuFieldGroupingModal(): void {
+  if (!kikuModalOpen) return;
+  kikuModalOpen = false;
+  kikuModal.classList.add("hidden");
+  kikuModal.setAttribute("aria-hidden", "true");
+  setKikuPreviewError(null);
+  kikuPreviewJson.textContent = "";
+  kikuPendingChoice = null;
+  kikuPreviewCompactData = null;
+  kikuPreviewFullData = null;
+  kikuPreviewMode = "compact";
+  setKikuModalStep("select");
+  kikuOriginalData = null;
+  kikuDuplicateData = null;
+  if (!isOverSubtitle && !jimakuModalOpen) {
+    overlay.classList.remove("interactive");
+  }
+}
+
+async function confirmKikuSelection(): Promise<void> {
+  if (!kikuOriginalData || !kikuDuplicateData) return;
+
+  const keepData =
+    kikuSelectedCard === 1 ? kikuOriginalData : kikuDuplicateData;
+  const deleteData =
+    kikuSelectedCard === 1 ? kikuDuplicateData : kikuOriginalData;
+
+  const choice: KikuFieldGroupingChoice = {
+    keepNoteId: keepData.noteId,
+    deleteNoteId: deleteData.noteId,
+    deleteDuplicate: kikuDeleteDuplicateCheckbox.checked,
+    cancelled: false,
+  };
+  kikuPendingChoice = choice;
+  setKikuPreviewError(null);
+  kikuConfirmButton.disabled = true;
+
+  try {
+    const preview: KikuMergePreviewResponse =
+      await window.electronAPI.kikuBuildMergePreview({
+        keepNoteId: choice.keepNoteId,
+        deleteNoteId: choice.deleteNoteId,
+        deleteDuplicate: choice.deleteDuplicate,
+      });
+
+    if (!preview.ok) {
+      setKikuPreviewError(preview.error || "Failed to build merge preview");
+      return;
+    }
+
+    kikuPreviewCompactData = preview.compact || {};
+    kikuPreviewFullData = preview.full || {};
+    kikuPreviewMode = "compact";
+    renderKikuPreview();
+    setKikuModalStep("preview");
+  } finally {
+    kikuConfirmButton.disabled = false;
+  }
+}
+
+function confirmKikuMerge(): void {
+  if (!kikuPendingChoice) return;
+  window.electronAPI.kikuFieldGroupingRespond(kikuPendingChoice);
+  closeKikuFieldGroupingModal();
+}
+
+function goBackFromKikuPreview(): void {
+  setKikuPreviewError(null);
+  setKikuModalStep("select");
+}
+
+function cancelKikuFieldGrouping(): void {
+  const choice: KikuFieldGroupingChoice = {
+    keepNoteId: 0,
+    deleteNoteId: 0,
+    deleteDuplicate: true,
+    cancelled: true,
+  };
+
+  window.electronAPI.kikuFieldGroupingRespond(choice);
+  closeKikuFieldGroupingModal();
+}
+
+function handleKikuKeydown(e: KeyboardEvent): boolean {
+  if (kikuModalStep === "preview") {
+    if (e.key === "Escape") {
+      e.preventDefault();
+      cancelKikuFieldGrouping();
+      return true;
+    }
+
+    if (e.key === "Backspace") {
+      e.preventDefault();
+      goBackFromKikuPreview();
+      return true;
+    }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      confirmKikuMerge();
+      return true;
+    }
+
+    return true;
+  }
+
+  if (e.key === "Escape") {
+    e.preventDefault();
+    cancelKikuFieldGrouping();
+    return true;
+  }
+
+  if (e.key === "1") {
+    e.preventDefault();
+    kikuSelectedCard = 1;
+    updateKikuCardSelection();
+    return true;
+  }
+
+  if (e.key === "2") {
+    e.preventDefault();
+    kikuSelectedCard = 2;
+    updateKikuCardSelection();
+    return true;
+  }
+
+  if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+    e.preventDefault();
+    kikuSelectedCard = kikuSelectedCard === 1 ? 2 : 1;
+    updateKikuCardSelection();
+    return true;
+  }
+
+  if (e.key === "Enter") {
+    e.preventDefault();
+    void confirmKikuSelection();
+    return true;
+  }
+
+  return true;
 }
 
 function formatEntryLabel(entry: JimakuEntry): string {
@@ -755,6 +1080,11 @@ async function setupMpvInputForwarding(): Promise<void> {
     const yomitanPopup = document.querySelector('iframe[id^="yomitan-popup"]');
     if (yomitanPopup) return;
 
+    if (kikuModalOpen) {
+      handleKikuKeydown(e);
+      return;
+    }
+
     if (jimakuModalOpen) {
       handleJimakuKeydown(e);
       return;
@@ -885,7 +1215,7 @@ function setupYomitanObserver(): void {
             element.id &&
             element.id.startsWith("yomitan-popup")
           ) {
-            if (!isOverSubtitle && !jimakuModalOpen) {
+            if (!isOverSubtitle && !jimakuModalOpen && !kikuModalOpen) {
               overlay.classList.remove("interactive");
             }
           }
@@ -1025,6 +1355,65 @@ async function init(): Promise<void> {
       loadFiles(currentEntryId, null);
     }
   });
+
+  kikuCard1.addEventListener("click", () => {
+    kikuSelectedCard = 1;
+    updateKikuCardSelection();
+  });
+
+  kikuCard1.addEventListener("dblclick", () => {
+    kikuSelectedCard = 1;
+    void confirmKikuSelection();
+  });
+
+  kikuCard2.addEventListener("click", () => {
+    kikuSelectedCard = 2;
+    updateKikuCardSelection();
+  });
+
+  kikuCard2.addEventListener("dblclick", () => {
+    kikuSelectedCard = 2;
+    void confirmKikuSelection();
+  });
+
+  kikuConfirmButton.addEventListener("click", () => {
+    void confirmKikuSelection();
+  });
+
+  kikuCancelButton.addEventListener("click", () => {
+    cancelKikuFieldGrouping();
+  });
+
+  kikuBackButton.addEventListener("click", () => {
+    goBackFromKikuPreview();
+  });
+
+  kikuFinalConfirmButton.addEventListener("click", () => {
+    confirmKikuMerge();
+  });
+
+  kikuFinalCancelButton.addEventListener("click", () => {
+    cancelKikuFieldGrouping();
+  });
+
+  kikuPreviewCompactButton.addEventListener("click", () => {
+    kikuPreviewMode = "compact";
+    renderKikuPreview();
+  });
+
+  kikuPreviewFullButton.addEventListener("click", () => {
+    kikuPreviewMode = "full";
+    renderKikuPreview();
+  });
+
+  window.electronAPI.onKikuFieldGroupingRequest(
+    (data: {
+      original: KikuDuplicateCardInfo;
+      duplicate: KikuDuplicateCardInfo;
+    }) => {
+      openKikuFieldGroupingModal(data);
+    },
+  );
 
   setupDragging();
 

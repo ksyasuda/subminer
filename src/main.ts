@@ -74,6 +74,11 @@ import {
   Keybinding,
   WindowGeometry,
   SecondarySubMode,
+  MpvClient,
+  KikuFieldGroupingRequestData,
+  KikuFieldGroupingChoice,
+  KikuMergePreviewRequest,
+  KikuMergePreviewResponse,
 } from "./types";
 import { SubtitleTimingTracker } from "./subtitle-timing-tracker";
 import { AnkiIntegration } from "./anki-integration";
@@ -83,7 +88,7 @@ const DEFAULT_WEBSOCKET_PORT = 6677;
 const DEFAULT_SUBTITLE_FONT_SIZE = 24;
 let texthookerServer: http.Server | null = null;
 let subtitleWebSocketServer: WebSocket.Server | null = null;
-const CONFIG_DIR = path.join(os.homedir(), ".config", "subminer");
+const CONFIG_DIR = path.join(os.homedir(), ".config", "SubMiner");
 const USER_DATA_PATH = CONFIG_DIR;
 const isDev = process.argv.includes("--dev");
 
@@ -193,8 +198,7 @@ function hasExplicitCommand(args: CliArgs): boolean {
     args.show ||
     args.hide ||
     args.texthooker ||
-    args.help ||
-    args.autoStartOverlay
+    args.help
   );
 }
 
@@ -206,8 +210,7 @@ function shouldStartApp(args: CliArgs): boolean {
     args.settings ||
     args.show ||
     args.hide ||
-    args.texthooker ||
-    args.autoStartOverlay
+    args.texthooker
   ) {
     return true;
   }
@@ -254,6 +257,8 @@ let pendingMineSentenceMultipleTimeout: ReturnType<typeof setTimeout> | null =
   null;
 let mineSentenceDigitShortcuts: string[] = [];
 let mineSentenceEscapeShortcut: string | null = null;
+let fieldGroupingResolver: ((choice: KikuFieldGroupingChoice) => void) | null =
+  null;
 
 const DEFAULT_KEYBINDINGS: Keybinding[] = [
   { key: "Space", command: ["cycle", "pause"] },
@@ -874,6 +879,7 @@ if (!gotTheLock) {
             }
           },
           showDesktopNotification,
+          createFieldGroupingCallback(),
         );
         ankiIntegration.start();
       }
@@ -980,9 +986,11 @@ const MPV_REQUEST_ID_SUBTEXT = 101;
 const MPV_REQUEST_ID_PATH = 102;
 const MPV_REQUEST_ID_SECONDARY_SUBTEXT = 103;
 const MPV_REQUEST_ID_SECONDARY_SUB_VISIBILITY = 104;
-const MPV_REQUEST_ID_TRACK_LIST = 200;
+const MPV_REQUEST_ID_AID = 105;
+const MPV_REQUEST_ID_TRACK_LIST_SECONDARY = 200;
+const MPV_REQUEST_ID_TRACK_LIST_AUDIO = 201;
 
-class MpvIpcClient {
+class MpvIpcClient implements MpvClient {
   private socketPath: string;
   public socket: net.Socket | null = null;
   private buffer = "";
@@ -995,6 +1003,8 @@ class MpvIpcClient {
   public currentSubEnd = 0;
   public currentSubText = "";
   public currentSecondarySubText = "";
+  public currentAudioStreamIndex: number | null = null;
+  private currentAudioTrackId: number | null = null;
   private pauseAtTime: number | null = null;
   private pendingPauseAtSubEnd = false;
 
@@ -1017,7 +1027,7 @@ class MpvIpcClient {
       this.getInitialState();
 
       const shouldAutoStart =
-        autoStartOverlay || loadConfig().config.auto_start_overlay !== false;
+        autoStartOverlay || loadConfig().config.auto_start_overlay === true;
       if (this.firstConnection && shouldAutoStart) {
         console.log("Auto-starting overlay, hiding mpv subtitles");
         setTimeout(() => {
@@ -1139,6 +1149,10 @@ class MpvIpcClient {
             this.currentSecondarySubText,
           );
         }
+      } else if (msg.name === "aid") {
+        this.currentAudioTrackId =
+          typeof msg.data === "number" ? (msg.data as number) : null;
+        this.syncCurrentAudioStreamIndex();
       } else if (msg.name === "time-pos") {
         this.currentTimePos = (msg.data as number) || 0;
         if (
@@ -1152,9 +1166,10 @@ class MpvIpcClient {
         this.currentVideoPath = (msg.data as string) || "";
         updateCurrentMediaPath(msg.data);
         this.autoLoadSecondarySubTrack();
+        this.syncCurrentAudioStreamIndex();
       }
     } else if (msg.data !== undefined && msg.request_id) {
-      if (msg.request_id === MPV_REQUEST_ID_TRACK_LIST) {
+      if (msg.request_id === MPV_REQUEST_ID_TRACK_LIST_SECONDARY) {
         const tracks = msg.data as Array<{
           type: string;
           lang?: string;
@@ -1175,6 +1190,15 @@ class MpvIpcClient {
             }
           }
         }
+      } else if (msg.request_id === MPV_REQUEST_ID_TRACK_LIST_AUDIO) {
+        this.updateCurrentAudioStreamIndex(
+          msg.data as Array<{
+            type?: string;
+            id?: number;
+            selected?: boolean;
+            "ff-index"?: number;
+          }>,
+        );
       } else if (msg.request_id === MPV_REQUEST_ID_SUBTEXT) {
         currentSubText = (msg.data as string) || "";
         if (mpvClient) {
@@ -1188,6 +1212,10 @@ class MpvIpcClient {
         }
       } else if (msg.request_id === MPV_REQUEST_ID_PATH) {
         updateCurrentMediaPath(msg.data);
+      } else if (msg.request_id === MPV_REQUEST_ID_AID) {
+        this.currentAudioTrackId =
+          typeof msg.data === "number" ? (msg.data as number) : null;
+        this.syncCurrentAudioStreamIndex();
       } else if (msg.request_id === MPV_REQUEST_ID_SECONDARY_SUBTEXT) {
         this.currentSecondarySubText = (msg.data as string) || "";
         if (mainWindow && !mainWindow.isDestroyed()) {
@@ -1215,9 +1243,41 @@ class MpvIpcClient {
     setTimeout(() => {
       this.send({
         command: ["get_property", "track-list"],
-        request_id: MPV_REQUEST_ID_TRACK_LIST,
+        request_id: MPV_REQUEST_ID_TRACK_LIST_SECONDARY,
       });
     }, 500);
+  }
+
+  private syncCurrentAudioStreamIndex(): void {
+    this.send({
+      command: ["get_property", "track-list"],
+      request_id: MPV_REQUEST_ID_TRACK_LIST_AUDIO,
+    });
+  }
+
+  private updateCurrentAudioStreamIndex(
+    tracks: Array<{
+      type?: string;
+      id?: number;
+      selected?: boolean;
+      "ff-index"?: number;
+    }>,
+  ): void {
+    if (!Array.isArray(tracks)) {
+      this.currentAudioStreamIndex = null;
+      return;
+    }
+
+    const audioTracks = tracks.filter((track) => track.type === "audio");
+    const activeTrack =
+      audioTracks.find((track) => track.id === this.currentAudioTrackId) ||
+      audioTracks.find((track) => track.selected === true);
+
+    const ffIndex = activeTrack?.["ff-index"];
+    this.currentAudioStreamIndex =
+      typeof ffIndex === "number" && Number.isInteger(ffIndex) && ffIndex >= 0
+        ? ffIndex
+        : null;
   }
 
   send(command: { command: unknown[]; request_id?: number }): boolean {
@@ -1236,6 +1296,7 @@ class MpvIpcClient {
     this.send({ command: ["observe_property", 4, "sub-end"] });
     this.send({ command: ["observe_property", 5, "time-pos"] });
     this.send({ command: ["observe_property", 6, "secondary-sub-text"] });
+    this.send({ command: ["observe_property", 7, "aid"] });
   }
 
   private getInitialState(): void {
@@ -1250,6 +1311,10 @@ class MpvIpcClient {
     this.send({
       command: ["get_property", "secondary-sub-text"],
       request_id: MPV_REQUEST_ID_SECONDARY_SUBTEXT,
+    });
+    this.send({
+      command: ["get_property", "aid"],
+      request_id: MPV_REQUEST_ID_AID,
     });
   }
 
@@ -1363,7 +1428,7 @@ async function loadYomitanExtension(): Promise<Extension | null> {
   const searchPaths = [
     path.join(__dirname, "..", "vendor", "yomitan"),
     path.join(process.resourcesPath, "yomitan"),
-    "/usr/share/subminer/yomitan",
+    "/usr/share/SubMiner/yomitan",
     path.join(USER_DATA_PATH, "yomitan"),
   ];
 
@@ -1450,6 +1515,17 @@ function createMainWindow(): BrowserWindow {
 
   mainWindow.webContents.on("did-finish-load", () => {
     console.log("Overlay HTML loaded successfully");
+  });
+
+  mainWindow.webContents.on("before-input-event", (event, input) => {
+    if (!overlayVisible) return;
+    if (!shouldUseMarkAudioCardLocalFallback(input)) return;
+
+    event.preventDefault();
+    markLastCardAsAudioCard().catch((err) => {
+      console.error("markLastCardAsAudioCard failed:", err);
+      showMpvOsd(`Audio card failed: ${(err as Error).message}`);
+    });
   });
 
   mainWindow.hide();
@@ -1582,13 +1658,40 @@ function getConfiguredShortcuts() {
       config.shortcuts?.copySubtitleMultiple ?? "CommandOrControl+Shift+C",
     updateLastCardFromClipboard:
       config.shortcuts?.updateLastCardFromClipboard ?? "CommandOrControl+V",
+    triggerFieldGrouping:
+      config.shortcuts?.triggerFieldGrouping ?? "CommandOrControl+G",
     mineSentence: config.shortcuts?.mineSentence ?? "CommandOrControl+S",
     mineSentenceMultiple:
       config.shortcuts?.mineSentenceMultiple ?? "CommandOrControl+Shift+S",
     multiCopyTimeoutMs: config.shortcuts?.multiCopyTimeoutMs ?? 3000,
     toggleSecondarySub:
       config.shortcuts?.toggleSecondarySub ?? "CommandOrControl+Shift+V",
+    markAudioCard:
+      config.shortcuts?.markAudioCard ?? "CommandOrControl+Shift+A",
   };
+}
+
+function shouldUseMarkAudioCardLocalFallback(input: Electron.Input): boolean {
+  const shortcuts = getConfiguredShortcuts();
+  if (!shortcuts.markAudioCard) return false;
+  if (globalShortcut.isRegistered(shortcuts.markAudioCard)) return false;
+
+  const normalized = shortcuts.markAudioCard.replace(/\s+/g, "").toLowerCase();
+  const supportsFallback =
+    normalized === "commandorcontrol+shift+a" ||
+    normalized === "cmdorctrl+shift+a" ||
+    normalized === "control+shift+a" ||
+    normalized === "ctrl+shift+a";
+  if (!supportsFallback) return false;
+
+  if (input.type !== "keyDown" || input.isAutoRepeat) return false;
+  if ((input.key || "").toLowerCase() !== "a") return false;
+  if (!input.shift || input.alt) return false;
+
+  if (process.platform === "darwin") {
+    return Boolean(input.meta || input.control);
+  }
+  return Boolean(input.control);
 }
 
 function showMpvOsd(text: string): void {
@@ -1705,11 +1808,18 @@ async function downloadToFile(
   });
 }
 
-ipcMain.on("set-ignore-mouse-events", (_event: IpcMainEvent, ignore: boolean, options: { forward?: boolean } = {}) => {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setIgnoreMouseEvents(ignore, options);
-  }
-});
+ipcMain.on(
+  "set-ignore-mouse-events",
+  (
+    _event: IpcMainEvent,
+    ignore: boolean,
+    options: { forward?: boolean } = {},
+  ) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.setIgnoreMouseEvents(ignore, options);
+    }
+  },
+);
 
 function cancelPendingMultiCopy(): void {
   if (!pendingMultiCopy) return;
@@ -1816,6 +1926,27 @@ async function updateLastCardFromClipboard(): Promise<void> {
 
   const clipboardText = clipboard.readText();
   await ankiIntegration.updateLastAddedFromClipboard(clipboardText);
+}
+
+async function triggerFieldGrouping(): Promise<void> {
+  const { config } = loadConfig();
+  if (config.ankiConnect?.autoUpdateNewCards !== false) {
+    return;
+  }
+
+  if (!ankiIntegration) {
+    showMpvOsd("AnkiConnect integration not enabled");
+    return;
+  }
+  await ankiIntegration.triggerFieldGroupingForLastAddedCard();
+}
+
+async function markLastCardAsAudioCard(): Promise<void> {
+  if (!ankiIntegration) {
+    showMpvOsd("AnkiConnect integration not enabled");
+    return;
+  }
+  await ankiIntegration.markLastCardAsAudioCard();
 }
 
 async function mineSentenceCard(): Promise<void> {
@@ -1946,6 +2077,9 @@ function registerOverlayShortcuts(): void {
   if (shortcutsRegistered) return;
 
   const shortcuts = getConfiguredShortcuts();
+  const { config } = loadConfig();
+  const enableFieldGroupingShortcut =
+    config.ankiConnect?.autoUpdateNewCards === false;
 
   if (shortcuts.copySubtitle) {
     globalShortcut.register(shortcuts.copySubtitle, () => {
@@ -1964,6 +2098,15 @@ function registerOverlayShortcuts(): void {
       updateLastCardFromClipboard().catch((err) => {
         console.error("updateLastCardFromClipboard failed:", err);
         showMpvOsd(`Update failed: ${(err as Error).message}`);
+      });
+    });
+  }
+
+  if (enableFieldGroupingShortcut && shortcuts.triggerFieldGrouping) {
+    globalShortcut.register(shortcuts.triggerFieldGrouping, () => {
+      triggerFieldGrouping().catch((err) => {
+        console.error("triggerFieldGrouping failed:", err);
+        showMpvOsd(`Field grouping failed: ${(err as Error).message}`);
       });
     });
   }
@@ -1998,6 +2141,15 @@ function registerOverlayShortcuts(): void {
     });
   }
 
+  if (shortcuts.markAudioCard) {
+    globalShortcut.register(shortcuts.markAudioCard, () => {
+      markLastCardAsAudioCard().catch((err) => {
+        console.error("markLastCardAsAudioCard failed:", err);
+        showMpvOsd(`Audio card failed: ${(err as Error).message}`);
+      });
+    });
+  }
+
   shortcutsRegistered = true;
 }
 
@@ -2018,6 +2170,9 @@ function unregisterOverlayShortcuts(): void {
   if (shortcuts.updateLastCardFromClipboard) {
     globalShortcut.unregister(shortcuts.updateLastCardFromClipboard);
   }
+  if (shortcuts.triggerFieldGrouping) {
+    globalShortcut.unregister(shortcuts.triggerFieldGrouping);
+  }
   if (shortcuts.mineSentence) {
     globalShortcut.unregister(shortcuts.mineSentence);
   }
@@ -2026,6 +2181,9 @@ function unregisterOverlayShortcuts(): void {
   }
   if (shortcuts.toggleSecondarySub) {
     globalShortcut.unregister(shortcuts.toggleSecondarySub);
+  }
+  if (shortcuts.markAudioCard) {
+    globalShortcut.unregister(shortcuts.markAudioCard);
   }
 
   shortcutsRegistered = false;
@@ -2206,6 +2364,39 @@ ipcMain.handle("get-anki-connect-status", () => {
  * Create and show a desktop notification with robust icon handling.
  * Supports both file paths (preferred on Linux/Wayland) and data URLs (fallback).
  */
+function createFieldGroupingCallback() {
+  return async (
+    data: KikuFieldGroupingRequestData,
+  ): Promise<KikuFieldGroupingChoice> => {
+    return new Promise((resolve) => {
+      fieldGroupingResolver = resolve;
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send("kiku:field-grouping-request", data);
+      } else {
+        resolve({
+          keepNoteId: 0,
+          deleteNoteId: 0,
+          deleteDuplicate: true,
+          cancelled: true,
+        });
+        fieldGroupingResolver = null;
+        return;
+      }
+      setTimeout(() => {
+        if (fieldGroupingResolver) {
+          fieldGroupingResolver({
+            keepNoteId: 0,
+            deleteNoteId: 0,
+            deleteDuplicate: true,
+            cancelled: true,
+          });
+          fieldGroupingResolver = null;
+        }
+      }, 90000);
+    });
+  };
+}
+
 function showDesktopNotification(
   title: string,
   options: { body?: string; icon?: string },
@@ -2287,6 +2478,7 @@ ipcMain.on(
           }
         },
         showDesktopNotification,
+        createFieldGroupingCallback(),
       );
       ankiIntegration.start();
       console.log("AnkiConnect integration enabled");
@@ -2304,6 +2496,33 @@ ipcMain.on("clear-anki-connect-history", () => {
     console.log("AnkiConnect subtitle timing history cleared");
   }
 });
+
+ipcMain.on(
+  "kiku:field-grouping-respond",
+  (_event: IpcMainEvent, choice: KikuFieldGroupingChoice) => {
+    if (fieldGroupingResolver) {
+      fieldGroupingResolver(choice);
+      fieldGroupingResolver = null;
+    }
+  },
+);
+
+ipcMain.handle(
+  "kiku:build-merge-preview",
+  async (
+    _event,
+    request: KikuMergePreviewRequest,
+  ): Promise<KikuMergePreviewResponse> => {
+    if (!ankiIntegration) {
+      return { ok: false, error: "AnkiConnect integration not enabled" };
+    }
+    return ankiIntegration.buildFieldGroupingPreview(
+      request.keepNoteId,
+      request.deleteNoteId,
+      request.deleteDuplicate,
+    );
+  },
+);
 
 ipcMain.handle("jimaku:get-media-info", (): JimakuMediaInfo => {
   return parseMediaInfo(currentMediaPath);

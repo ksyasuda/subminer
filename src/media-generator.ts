@@ -16,7 +16,7 @@
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-import { execFile } from "child_process";
+import { ExecFileException, execFile } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
@@ -47,10 +47,10 @@ export class MediaGenerator {
       if (!fs.existsSync(this.notifyIconDir)) return;
 
       const files = fs.readdirSync(this.notifyIconDir);
-      const oneHourAgo = Date.now() - (60 * 60 * 1000);
+      const oneHourAgo = Date.now() - 60 * 60 * 1000;
 
       for (const file of files) {
-        if (!file.endsWith('.png')) continue;
+        if (!file.endsWith(".png")) continue;
         const filePath = path.join(this.notifyIconDir, file);
         try {
           const stat = fs.statSync(filePath);
@@ -58,7 +58,10 @@ export class MediaGenerator {
             fs.unlinkSync(filePath);
           }
         } catch (err) {
-          // Ignore individual file cleanup errors
+          console.debug(
+            `Failed to clean up ${filePath}:`,
+            (err as Error).message,
+          );
         }
       }
     } catch (err) {
@@ -78,53 +81,78 @@ export class MediaGenerator {
     return filePath;
   }
 
+  scheduleNotificationIconCleanup(filePath: string, delayMs = 10000): void {
+    setTimeout(() => {
+      try {
+        fs.unlinkSync(filePath);
+      } catch {}
+    }, delayMs);
+  }
+
+  private ffmpegError(label: string, error: ExecFileException): Error {
+    if (error.code === "ENOENT") {
+      return new Error(
+        "FFmpeg not found. Install FFmpeg to enable media generation.",
+      );
+    }
+    return new Error(`FFmpeg ${label} failed: ${error.message}`);
+  }
+
   async generateAudio(
     videoPath: string,
     startTime: number,
     endTime: number,
     padding: number = 0.5,
+    audioStreamIndex: number | null = null,
   ): Promise<Buffer> {
     const start = Math.max(0, startTime - padding);
     const duration = endTime - startTime + 2 * padding;
 
     return new Promise((resolve, reject) => {
       const outputPath = path.join(this.tempDir, `audio_${Date.now()}.mp3`);
+      const args: string[] = [
+        "-ss",
+        start.toString(),
+        "-t",
+        duration.toString(),
+        "-i",
+        videoPath,
+      ];
 
-      execFile(
-        "ffmpeg",
-        [
-          "-ss",
-          start.toString(),
-          "-t",
-          duration.toString(),
-          "-i",
-          videoPath,
-          "-vn",
-          "-acodec",
-          "libmp3lame",
-          "-q:a",
-          "2",
-          "-ar",
-          "44100",
-          "-y",
-          outputPath,
-        ],
-        { timeout: 30000 },
-        (error) => {
-          if (error) {
-            reject(new Error(`FFmpeg audio generation failed: ${error.message}`));
-            return;
-          }
+      if (
+        typeof audioStreamIndex === "number" &&
+        Number.isInteger(audioStreamIndex) &&
+        audioStreamIndex >= 0
+      ) {
+        args.push("-map", `0:${audioStreamIndex}`);
+      }
 
-          try {
-            const data = fs.readFileSync(outputPath);
-            fs.unlinkSync(outputPath);
-            resolve(data);
-          } catch (err) {
-            reject(err);
-          }
-        },
+      args.push(
+        "-vn",
+        "-acodec",
+        "libmp3lame",
+        "-q:a",
+        "2",
+        "-ar",
+        "44100",
+        "-y",
+        outputPath,
       );
+
+      execFile("ffmpeg", args, { timeout: 30000 }, (error) => {
+        if (error) {
+          reject(this.ffmpegError("audio generation", error));
+          return;
+        }
+
+        try {
+          const data = fs.readFileSync(outputPath);
+          fs.unlinkSync(outputPath);
+          resolve(data);
+        } catch (err) {
+          reject(err);
+        }
+      });
     });
   }
 
@@ -157,7 +185,9 @@ export class MediaGenerator {
 
     const vfParts: string[] = [];
     if (maxWidth && maxWidth > 0 && maxHeight && maxHeight > 0) {
-      vfParts.push(`scale=w=${maxWidth}:h=${maxHeight}:force_original_aspect_ratio=decrease`);
+      vfParts.push(
+        `scale=w=${maxWidth}:h=${maxHeight}:force_original_aspect_ratio=decrease`,
+      );
     } else if (maxWidth && maxWidth > 0) {
       vfParts.push(`scale=w=${maxWidth}:h=-2`);
     } else if (maxHeight && maxHeight > 0) {
@@ -182,28 +212,26 @@ export class MediaGenerator {
     args.push("-y");
 
     return new Promise((resolve, reject) => {
-      const outputPath = path.join(this.tempDir, `screenshot_${Date.now()}.${ext}`);
+      const outputPath = path.join(
+        this.tempDir,
+        `screenshot_${Date.now()}.${ext}`,
+      );
       args.push(outputPath);
 
-      execFile(
-        "ffmpeg",
-        args,
-        { timeout: 30000 },
-        (error) => {
-          if (error) {
-            reject(new Error(`FFmpeg screenshot generation failed: ${error.message}`));
-            return;
-          }
+      execFile("ffmpeg", args, { timeout: 30000 }, (error) => {
+        if (error) {
+          reject(this.ffmpegError("screenshot generation", error));
+          return;
+        }
 
-          try {
-            const data = fs.readFileSync(outputPath);
-            fs.unlinkSync(outputPath);
-            resolve(data);
-          } catch (err) {
-            reject(err);
-          }
-        },
-      );
+        try {
+          const data = fs.readFileSync(outputPath);
+          fs.unlinkSync(outputPath);
+          resolve(data);
+        } catch (err) {
+          reject(err);
+        }
+      });
     });
   }
 
@@ -217,7 +245,10 @@ export class MediaGenerator {
     timestamp: number,
   ): Promise<Buffer> {
     return new Promise((resolve, reject) => {
-      const outputPath = path.join(this.tempDir, `notify_icon_${Date.now()}.png`);
+      const outputPath = path.join(
+        this.tempDir,
+        `notify_icon_${Date.now()}.png`,
+      );
 
       execFile(
         "ffmpeg",
@@ -238,7 +269,7 @@ export class MediaGenerator {
         { timeout: 30000 },
         (error) => {
           if (error) {
-            reject(new Error(`FFmpeg notification icon generation failed: ${error.message}`));
+            reject(this.ffmpegError("notification icon generation", error));
             return;
           }
 
@@ -276,7 +307,9 @@ export class MediaGenerator {
     const vfParts: string[] = [];
     vfParts.push(`fps=${clampedFps}`);
     if (maxWidth && maxWidth > 0 && maxHeight && maxHeight > 0) {
-      vfParts.push(`scale=w=${maxWidth}:h=${maxHeight}:force_original_aspect_ratio=decrease`);
+      vfParts.push(
+        `scale=w=${maxWidth}:h=${maxHeight}:force_original_aspect_ratio=decrease`,
+      );
     } else if (maxWidth && maxWidth > 0) {
       vfParts.push(`scale=w=${maxWidth}:h=-2`);
     } else if (maxHeight && maxHeight > 0) {
@@ -284,7 +317,10 @@ export class MediaGenerator {
     }
 
     return new Promise((resolve, reject) => {
-      const outputPath = path.join(this.tempDir, `animation_${Date.now()}.avif`);
+      const outputPath = path.join(
+        this.tempDir,
+        `animation_${Date.now()}.avif`,
+      );
 
       execFile(
         "ffmpeg",
@@ -311,7 +347,7 @@ export class MediaGenerator {
         { timeout: 60000 },
         (error) => {
           if (error) {
-            reject(new Error(`FFmpeg animation generation failed: ${error.message}`));
+            reject(this.ffmpegError("animation generation", error));
             return;
           }
 
